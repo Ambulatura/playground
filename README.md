@@ -20,6 +20,6 @@
 <li> Render rotated bitmaps
 </ul>
 
-## Screenshot
+## Media
 ![](screenshots/screen.png)
-![](https://user-images.githubusercontent.com/17731403/119040215-caf5dc80-b9bd-11eb-9eff-35ec911d1f2e.mp4)
+
