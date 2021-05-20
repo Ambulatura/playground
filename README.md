@@ -21,5 +21,4 @@
 </ul>
 
 ## Media
-![](screenshots/screen.png)
 ![](screenshots/screen_video.gif)
