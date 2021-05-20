@@ -31,7 +31,7 @@ struct Entity
 	f32 height;
 
 	u32 ball_index;
-	f32 distance_remaining;
+	f32 distance_limit;
 
 	u32 tick;
 };

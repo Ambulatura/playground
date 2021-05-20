@@ -157,93 +157,114 @@ internal void MoveEntity(World* world, u32 entity_index, Entity* entity, v2 play
 		(player_acceleration * delta_time_for_frame) +
 		(entity->velocity);
 
+	// NOTE(SSJSR): If distance_remaining is 0, it means there is no limit.
+	f32 distance_remaining = entity->distance_limit;
+	if (distance_remaining == 0.0f) {
+		distance_remaining = 10000.0f;
+	}
+	
 	b32 hitted = false;
 	for (u32 iteration = 0; iteration < 4; ++iteration) {
 		f32 time_minimum = 1.0f;
-		b32 hit = false;
-		v2 wall_normal = v2(0.0f, 0.0f);
-
-		v2 target_position = entity->position + player_position_delta;
 		
-		for (u32 test_entity_index = 1;
-			 test_entity_index < world->entity_count;
-			 ++test_entity_index) {
+		f32 player_position_delta_length = Length(player_position_delta);
+		if (player_position_delta_length > 0.0f) {
+			if (player_position_delta_length > distance_remaining) {
+				time_minimum = distance_remaining / player_position_delta_length;
+			}
+
+			b32 hit = false;
+			v2 wall_normal = v2(0.0f, 0.0f);
+
+			v2 target_position = entity->position + player_position_delta;
+		
+			for (u32 test_entity_index = 1;
+				 test_entity_index < world->entity_count;
+				 ++test_entity_index) {
 			
-			if (IsFlagSet(entity, EntityFlag::COLLIDES_FLAG) && !IsFlagSet(entity, EntityFlag::NONSPATIAL_FLAG)) {
-				if (test_entity_index != entity_index) {
-					Entity* test_entity = GetEntity(world, test_entity_index); //playground_state->entities + test_entity_index;
+				if (IsFlagSet(entity, EntityFlag::COLLIDES_FLAG) && !IsFlagSet(entity, EntityFlag::NONSPATIAL_FLAG)) {
+					if (test_entity_index != entity_index) {
+						Entity* test_entity = GetEntity(world, test_entity_index); //playground_state->entities + test_entity_index;
 					
-					if (IsFlagSet(test_entity, EntityFlag::COLLIDES_FLAG) && !IsFlagSet(test_entity, EntityFlag::NONSPATIAL_FLAG)) {
-						f32 diameter_width = test_entity->width + entity->width;
-						f32 diameter_height = test_entity->height + entity->height;
-						v2 wall_min_corner = -0.5f * v2(diameter_width, diameter_height);
-						v2 wall_max_corner = 0.5f * v2(diameter_width,  diameter_height);
+						if (IsFlagSet(test_entity, EntityFlag::COLLIDES_FLAG) && !IsFlagSet(test_entity, EntityFlag::NONSPATIAL_FLAG)) {
+							f32 diameter_width = test_entity->width + entity->width;
+							f32 diameter_height = test_entity->height + entity->height;
+							v2 wall_min_corner = -0.5f * v2(diameter_width, diameter_height);
+							v2 wall_max_corner = 0.5f * v2(diameter_width,  diameter_height);
 
-						v2 tile_relative_position = entity->position - test_entity->position;
+							v2 tile_relative_position = entity->position - test_entity->position;
 
-						if (TestWall(wall_min_corner.x,
-									 tile_relative_position.x, tile_relative_position.y,
-									 wall_min_corner.y, wall_max_corner.y,
-									 player_position_delta.x,
-									 player_position_delta.y,
-									 &time_minimum)) {
-							wall_normal = v2(-1.0f, 0.0f);
-							entity->velocity.y *= 0.4f;
-							hit = true;
-						}
+							if (TestWall(wall_min_corner.x,
+										 tile_relative_position.x, tile_relative_position.y,
+										 wall_min_corner.y, wall_max_corner.y,
+										 player_position_delta.x,
+										 player_position_delta.y,
+										 &time_minimum)) {
+								wall_normal = v2(-1.0f, 0.0f);
+								entity->velocity.y *= 0.4f;
+								hit = true;
+							}
 						
-						if (TestWall(wall_max_corner.x,
-									 tile_relative_position.x, tile_relative_position.y,
-									 wall_min_corner.y, wall_max_corner.y,
-									 player_position_delta.x,
-									 player_position_delta.y,
-									 &time_minimum)) {
-							wall_normal = v2(1.0f, 0.0f);
-							entity->velocity.y *= 0.4f;
-							hit = true;
-						}
+							if (TestWall(wall_max_corner.x,
+										 tile_relative_position.x, tile_relative_position.y,
+										 wall_min_corner.y, wall_max_corner.y,
+										 player_position_delta.x,
+										 player_position_delta.y,
+										 &time_minimum)) {
+								wall_normal = v2(1.0f, 0.0f);
+								entity->velocity.y *= 0.4f;
+								hit = true;
+							}
 
-						if (TestWall(wall_min_corner.y,
-									 tile_relative_position.y, tile_relative_position.x,
-									 wall_min_corner.x, wall_max_corner.x,
-									 player_position_delta.y,
-									 player_position_delta.x,
-									 &time_minimum)) {
-							wall_normal = v2(0.0f, -1.0f);
-							hit = true;
-						}
+							if (TestWall(wall_min_corner.y,
+										 tile_relative_position.y, tile_relative_position.x,
+										 wall_min_corner.x, wall_max_corner.x,
+										 player_position_delta.y,
+										 player_position_delta.x,
+										 &time_minimum)) {
+								wall_normal = v2(0.0f, -1.0f);
+								hit = true;
+							}
 						
-						if (TestWall(wall_max_corner.y,
-									 tile_relative_position.y, tile_relative_position.x,
-									 wall_min_corner.x, wall_max_corner.x,
-									 player_position_delta.y,
-									 player_position_delta.x,
-									 &time_minimum)) {
-							wall_normal = v2(0.0f, 1.0f);
-							hit = true;
+							if (TestWall(wall_max_corner.y,
+										 tile_relative_position.y, tile_relative_position.x,
+										 wall_min_corner.x, wall_max_corner.x,
+										 player_position_delta.y,
+										 player_position_delta.x,
+										 &time_minimum)) {
+								wall_normal = v2(0.0f, 1.0f);
+								hit = true;
+							}
+
+
 						}
-
-
 					}
 				}
 			}
-		}
 
-		entity->position = (player_position_delta * time_minimum) + entity->position;
+			entity->position = (player_position_delta * time_minimum) + entity->position;
+			distance_remaining -= player_position_delta_length * time_minimum;
+			// NormalizePositions(&playground_state->player.position, playground_state->tile_side_in_meters);
+			if (hit) {
+				entity->velocity = entity->velocity - 1.0f * Dot(entity->velocity, wall_normal) * wall_normal;
+				player_position_delta = target_position - entity->position;
+				// player_position_delta = TilePositionDifference(new_player_position, playground_state->player.position, playground_state->tile_side_in_meters);
+				player_position_delta = player_position_delta - 1.0f * Dot(player_position_delta, wall_normal) * wall_normal;
 
-		// NormalizePositions(&playground_state->player.position, playground_state->tile_side_in_meters);
-		if (hit) {
-			entity->velocity = entity->velocity - 1.0f * Dot(entity->velocity, wall_normal) * wall_normal;
-			player_position_delta = target_position - entity->position;
-			// player_position_delta = TilePositionDifference(new_player_position, playground_state->player.position, playground_state->tile_side_in_meters);
-			player_position_delta = player_position_delta - 1.0f * Dot(player_position_delta, wall_normal) * wall_normal;
+				hitted = true;
 
-			hitted = true;
-
+			}
+			else {
+				break;
+			}
 		}
 		else {
 			break;
 		}
+	}
+
+	if (entity->distance_limit != 0.0f) {
+		entity->distance_limit = distance_remaining;
 	}
 
 	if (hitted && entity->type == EntityType::BALL_TYPE) {
@@ -366,7 +387,7 @@ internal u32 AddMonster(World* world, i32 tile_x, i32 tile_y)
 	// entity->collides = true;
 	AddFlag(entity, EntityFlag::COLLIDES_FLAG);
 	entity->direction = v2(0.4f, -1.0f);
-	entity->distance_remaining = 20.0f;
+	entity->distance_limit = 20.0f;
 
 	return entity_index;
 }
@@ -375,32 +396,20 @@ inline void UpdateMonster(World* world, u32 entity_index, f32 delta_time)
 {
 	Entity* monster_entity = GetEntity(world, entity_index);
 
-	// v2 monster_direction = v2(0.4f, -1.0f);
-	
-	if (monster_entity->distance_remaining < 0.0f) {
+	if (monster_entity->distance_limit == 0.0f) {
+		monster_entity->distance_limit = 20.0f;
 		monster_entity->direction.x *= -1.0f;
-		monster_entity->distance_remaining = 20.0f;
 	}
-
-	v2 old_monster_position = monster_entity->position;
 	
 	MoveEntity(world, entity_index, monster_entity, monster_entity->direction, delta_time);
 
-	f32 monster_distance_travelled = Length(monster_entity->position - old_monster_position);
-	
-	monster_entity->distance_remaining -= monster_distance_travelled;
 }
 
 inline void UpdateBall(World* world, u32 entity_index, Entity* ball_entity, f32 delta_time)
 {
-	v2 old_ball_position = ball_entity->position;
-	
 	MoveEntity(world, entity_index, ball_entity, ball_entity->direction, delta_time);
-
-	f32 ball_distance_travelled = Length(ball_entity->position - old_ball_position);
 	
-	ball_entity->distance_remaining -= ball_distance_travelled;
-	if (ball_entity->distance_remaining < 0.0f) {
+	if (ball_entity->distance_limit == 0.0f) {
 		MakeEntityNonspatialAndDeleteFromTileMap(world, ball_entity, entity_index);
 	}
 }

@@ -182,7 +182,7 @@ internal void DrawBitmap(PlaygroundDisplayBuffer* display_buffer,
 						 u32 align_x=0, u32 align_y=0,
 						 b32 flip_horizontally=false)
 {
-	x -= align_x;
+	x -= flip_horizontally ? bitmap->width - align_x : align_x;
 	y -= align_y;
 	
 	i32 rounded_min_x = RoundF32ToI32(x);
