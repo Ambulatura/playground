@@ -6,14 +6,14 @@
 <li> Simple camera movement between tile maps
 <li> Smooth scrolling
 <li> Hot-reload
-<li> Record and replay the input and game state
+<li> Record and replay the input and the game state
 <li> Basic movement and Minkowski collision detection
 </ul>
 
 ## Todos
 <ul>
 <li> Basic map editor
-<li> Determine what kind of entities the game will have.
+<li> Determine what kind of entities the game will have
 <li> Better collision detection and collision respond
 <li> Animation system for handling bitmaps of entities
 <li> Add scaling and rotating operations
