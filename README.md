@@ -22,4 +22,6 @@
 
 ## Screenshot
 ![](screenshots/screen.png)
-![](screenshots/screen_video.mp4)
+<video width="960" height="540" controls>
+  <source src="screenshots/screen_video.mp4" type="video/mp4">
+</video>
