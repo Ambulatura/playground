@@ -75,6 +75,8 @@ struct PlaygroundState
 	PlaygroundMemoryArena arena;
 
 	World world;
+	v2 screen_center;
+	v2 mouse_offset;
 	
 	LoadedBmp player_idle_00;
 	LoadedBmp player_idle_01;

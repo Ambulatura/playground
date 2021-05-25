@@ -135,11 +135,12 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 	ASSERT(sizeof(PlaygroundState) < memory->permanent_storage_size);
 
 	PlaygroundState* playground_state = (PlaygroundState*)memory->permanent_storage;
+	World* world = &playground_state->world;
 
 	if (!memory->is_initialized) {
-		World* world = &playground_state->world;
 		AddEntity(world, EntityType::NULL_TYPE, 0);
 
+		playground_state->screen_center = v2((f32)(display_buffer->width / 2), (f32)(display_buffer->height / 2));
 		world->tile_side_in_pixels = 30.0f;
 		world->tile_side_in_meters = 1.0f;
 		world->meters_to_pixels = world->tile_side_in_pixels / world->tile_side_in_meters;
@@ -173,7 +174,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 					for (i32 x = 0; x < world->tile_count_x; ++x) {
 						i32 tile_x = tile_map_x * world->tile_count_x + x;
 						i32 tile_y = tile_map_y * world->tile_count_y + y;
-						
+
 						if (y == 0) {
 							AddWall(world, tile_x, tile_y);
 						}
@@ -209,7 +210,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 		AddFireballBitmap(playground_state, &playground_state->fireball_02, FireballStateType::CASTING_FIREBALL_STATE_TYPE);
 		AddFireballBitmap(playground_state, &playground_state->fireball_03, FireballStateType::CASTING_FIREBALL_STATE_TYPE);
 		AddFireballBitmap(playground_state, &playground_state->fireball_04, FireballStateType::CASTING_FIREBALL_STATE_TYPE);
-		
+
 		// NOTE(SSJSR): Idle state.
 
 		playground_state->player_idle_00 = LoadBmp("adventurer/idle/adventurer-idle-2-00.bmp", memory->PlaygroundReadFile, 25, 35);
@@ -272,7 +273,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 		world->camera.tile_x = world->tile_count_x / 2;
 		world->camera.tile_y = world->tile_count_y / 2;
 		world->camera.xy = v2(0.0f, 0.0f);
-		
+
 		world->desired_camera = world->camera;
 
 		world->is_camera_moving = false;
@@ -285,23 +286,6 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 		memory->is_initialized = true;
 	}
-
-	World* world = &playground_state->world;
-	// if (input->mouse_left.is_down) {
-	// 	if (input->mouse_x <= display_buffer->width && input->mouse_y <= display_buffer->height) {
-	// 		u32 tile_x = RoundF32ToU32((f32)input->mouse_x / playground_state->tile_side_in_pixels);
-	// 		u32 tile_y = RoundF32ToU32(((f32)display_buffer->height - (f32)input->mouse_y) / playground_state->tile_side_in_pixels);
-	// 		SetTileValueRadius(playground_state, tile_x, tile_y, 2, playground_state->tile_radius);
-	// 	}
-	// }
-
-	// if (input->mouse_right.is_down) {
-	// 	if (input->mouse_x <= display_buffer->width && input->mouse_y <= display_buffer->height) {
-	// 		u32 tile_x = RoundF32ToU32((f32)input->mouse_x / playground_state->tile_side_in_pixels);
-	// 		u32 tile_y = RoundF32ToU32(((f32)display_buffer->height - (f32)input->mouse_y) / playground_state->tile_side_in_pixels);
-	// 		SetTileValueRadius(playground_state, tile_x, tile_y, 1, playground_state->tile_radius);
-	// 	}
-	// }
 
 	Entity* player_entity = GetEntity(world, world->player_entity_index);
 
@@ -331,7 +315,15 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 		player_entity->direction *= ratio;
 	}
 
-	v2 screen_center = v2((f32)(display_buffer->width / 2), (f32)(display_buffer->height / 2));
+	if (input->mouse_left.is_down) {
+		playground_state->screen_center +=
+			(v2((f32)(display_buffer->width / 2), (f32)(display_buffer->height / 2)) -
+			 v2((f32)input->mouse_x, (f32)input->mouse_y)) * (1.0f / world->tile_side_in_pixels);
+	}
+	
+	if (input->mouse_middle.is_down) {
+		playground_state->screen_center = v2((f32)(display_buffer->width / 2), (f32)(display_buffer->height / 2));
+	}
 
 	DrawBitmap(display_buffer, &playground_state->background,
 			   0, 0);
@@ -339,13 +331,14 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 	for (u32 entity_index = 1;
 		 entity_index < world->entity_count;
 		 ++entity_index) {
-		
+
 		// u32 entity_index = current_tile_map->entity_indices[entity_index_index];
 		Entity* entity = GetEntity(world, entity_index);
+		TilePosition old_entity_tile_position = entity->tile_position;
 		if (!IsFlagSet(entity, EntityFlag::NONSPATIAL_FLAG)) {
 
-			f32 entity_ground_point_x = screen_center.x + world->meters_to_pixels * entity->position.x;
-			f32 entity_ground_point_y = screen_center.y - world->meters_to_pixels * entity->position.y;
+			f32 entity_ground_point_x = playground_state->screen_center.x + world->meters_to_pixels * entity->position.x;
+			f32 entity_ground_point_y = playground_state->screen_center.y - world->meters_to_pixels * entity->position.y;
 
 			v2 entity_min = v2(entity_ground_point_x - (0.5f * world->meters_to_pixels * entity->width),
 							   entity_ground_point_y - (world->meters_to_pixels * entity->height));
@@ -354,7 +347,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 			if (entity->type == EntityType::PLAYER_TYPE) {
 				MoveEntity(world, world->player_entity_index, player_entity, player_entity->direction, input->delta_time_for_frame);
-				
+
 				Entity* ball_entity = GetEntity(world, entity->ball_index);
 				if (input->numpad_1.is_down && IsFlagSet(ball_entity, EntityFlag::NONSPATIAL_FLAG)) {
 					playground_state->player_bitmap_state.current_state = PlayerStateType::CAST_STATE_TYPE;
@@ -371,7 +364,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 										 entity->position.y + entity->height * 0.4f),
 									  v2(10.0f * direction_x, 0.0f));
 				}
-				
+
 				// DrawRectangleWithBorder(display_buffer,
 				// 						entity_min.x, entity_min.y,
 				// 						entity_max.x, entity_max.y,
@@ -396,15 +389,15 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				LoadedBmp* fireball = GetFireballBitmap(playground_state);
 
 				b32 flip_horizontally = entity->facing_direction == 1 ? true : false;
-				
+
 				UpdateBall(world, entity_index, entity, input->delta_time_for_frame);
-				
+
 				DrawBitmap(display_buffer, fireball,
 						   entity_ground_point_x, entity_ground_point_y,
 						   fireball->align_x,
 						   fireball->align_y,
 						   flip_horizontally);
-				
+
 				// DrawRectangleWithBorder(display_buffer,
 				// 						entity_min.x, entity_min.y,
 				// 						entity_max.x, entity_max.y,
@@ -435,7 +428,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 	}
 
 	TilePosition new_camera = world->camera;
-	
+
 #if 0
 	new_camera.tile_x = player_entity->tile_position.tile_x;
 	new_camera.xy.x = player_entity->tile_position.xy.x;
@@ -445,7 +438,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 			world->desired_camera.tile_x += world->tile_count_x;
 			world->is_camera_moving = true;
 		}
-		
+
 		if (player_entity->position.x < -0.5f * world->tile_count_x * world->tile_side_in_meters) {
 			world->desired_camera.tile_x -= world->tile_count_x;
 			world->is_camera_moving = true;
@@ -453,7 +446,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 	}
 	else {
 		if (world->camera_movement_duration_remaining > 0) {
-					
+
 			f32 camera_movement_per_frame = world->tile_count_x / (f32)world->camera_movement_duration;
 			if (new_camera.tile_x <= world->desired_camera.tile_x) {
 				new_camera.xy.x += camera_movement_per_frame;
@@ -478,7 +471,8 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 			world->camera_movement_duration_remaining = world->camera_movement_duration;
 		}
 	}
-	
+
 #endif
+
 	SetCameraLocationAndUpdateEntities(world, new_camera);
 }

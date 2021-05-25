@@ -71,6 +71,7 @@ struct PlaygroundDisplayBuffer
 struct PlaygroundButton
 {
 	b32 is_down;
+	b32 is_released;
 };
 
 struct PlaygroundInput

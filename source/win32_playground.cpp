@@ -21,7 +21,7 @@ PLATFORM_FREE_FILE(Win32FreeFile)
 PLATFORM_READ_FILE(Win32ReadFile)
 {
 	PlaygroundFile result = {};
-	
+
 	HANDLE file_handle = CreateFileA(file_name,
 									 GENERIC_READ,
 									 0,
@@ -55,13 +55,13 @@ PLATFORM_READ_FILE(Win32ReadFile)
 		else {
 			// TODO(SSJSR): Logging.
 		}
-		
+
 		CloseHandle(file_handle);
 	}
 	else {
 		// TODO(SSJSR): Logging.
 	}
-	
+
 	return result;
 }
 
@@ -140,7 +140,7 @@ internal void Win32ShowDisplayBufferInWindow(HDC device_context, Win32DisplayBuf
 
 		display_buffer->destination_width = display_buffer->width * 2;
 		display_buffer->destination_height = display_buffer->height * 2;
-		
+
 		StretchDIBits(device_context,
 					  0, 0, display_buffer->destination_width, display_buffer->destination_height,
 					  0, 0, display_buffer->width, display_buffer->height,
@@ -156,7 +156,7 @@ internal void Win32ShowDisplayBufferInWindow(HDC device_context, Win32DisplayBuf
 		if (display_buffer->destination_width < window_width) {
 			PatBlt(device_context,
 				   display_buffer->width, 0, window_width, window_height,
-				   BLACKNESS);			
+				   BLACKNESS);
 		}
 
 		if (display_buffer->destination_height < window_height) {
@@ -178,6 +178,7 @@ internal void Win32ShowDisplayBufferInWindow(HDC device_context, Win32DisplayBuf
 internal void Win32ProcessKeyboardInput(PlaygroundButton* button, b32 is_down)
 {
 	// if (button->is_down != is_down) {
+	button->is_released = (button->is_down == 1 && is_down == 0);
 	button->is_down = is_down;
 	// }
 }
@@ -192,7 +193,7 @@ internal void Win32BeginInputRecord(Win32State* state)
 					CREATE_ALWAYS,
 					FILE_ATTRIBUTE_NORMAL,
 					0);
-	
+
 	CopyMemory(state->replay.map_view,
 			   state->memory,
 			   state->memory_size);
@@ -223,7 +224,7 @@ internal void Win32BeginInputPlayback(Win32State* state)
 					OPEN_EXISTING,
 					FILE_ATTRIBUTE_NORMAL,
 					0);
-	
+
 	CopyMemory(state->memory,
 			   state->replay.map_view,
 			   state->memory_size);
@@ -269,7 +270,7 @@ internal void Win32ProcessMessages(Win32State* state, PlaygroundInput* input)
 				b32 alt_is_down = (message.lParam & (1 << 29));
 
 				Win32ProcessKeyboardInput(&input->alt_key, alt_is_down);
-				
+
 				if (key_code == VK_RETURN) {
 					if (is_down && alt_is_down) {
 						Win32ToggleFullscreen(message.hwnd);
@@ -335,6 +336,12 @@ internal void Win32ProcessMessages(Win32State* state, PlaygroundInput* input)
 			} break;
 			case WM_RBUTTONUP: {
 				Win32ProcessKeyboardInput(&input->mouse_right, false);
+			} break;
+			case WM_MBUTTONDOWN: {
+				Win32ProcessKeyboardInput(&input->mouse_middle, true);
+			} break;
+			case WM_MBUTTONUP: {
+				Win32ProcessKeyboardInput(&input->mouse_middle, false);
 			} break;
 			default: {
 				TranslateMessage(&message);
@@ -425,7 +432,7 @@ internal void Win32UnloadPlaygroundCode(Win32PlaygroundCode* playground_code)
 internal void Win32FindExecutableFilePath(Win32State* state)
 {
 	DWORD size_of_executable_file_path = GetModuleFileNameA(0, state->executable_file_path, sizeof(state->executable_file_path));
-	
+
 	ASSERT(size_of_executable_file_path);
 	if (size_of_executable_file_path) {
 		state->executable_file_name = state->executable_file_path;
@@ -440,7 +447,7 @@ internal void Win32FindExecutableFilePath(Win32State* state)
 internal void Win32ConcatenateStrings(char* string_a, u32 string_a_length, char* string_b, u32 string_b_length, char* destination, u32 destination_length)
 {
 	ASSERT(string_a_length + string_b_length < destination_length);
-	
+
 	for (u32 index = 0; index < string_a_length; ++index) {
 		*destination++ = *string_a++;
 	}
@@ -480,7 +487,7 @@ int WINAPI WinMain(HINSTANCE instance,
 	Win32ResizeDisplayBuffer(&global_display_buffer, 960, 540);
 
 	Win32State state = {};
-	
+
 	Win32FindExecutableFilePath(&state);
 
 	char dll_file_destination[MAX_FILE_PATH];
@@ -494,7 +501,7 @@ int WINAPI WinMain(HINSTANCE instance,
 	Win32BuildFilenameOnExecutablePath(&state, "replay_state.bin", replay_state_file_destination, sizeof(replay_state_file_destination));
 	char replay_input_file_destination[MAX_FILE_PATH];
 	Win32BuildFilenameOnExecutablePath(&state, "replay_input.bin", replay_input_file_destination, sizeof(replay_input_file_destination));
-	
+
 	state.replay_state_file_name = (char*)replay_state_file_destination;
 	state.replay_input_file_name = (char*)replay_input_file_destination;
 
@@ -544,7 +551,7 @@ int WINAPI WinMain(HINSTANCE instance,
 
 	playground_memory.PlaygroundReadFile = Win32ReadFile;
 	playground_memory.PlaygroundFreeFile = Win32FreeFile;
-	
+
 	playground_memory.permanent_storage_size = MEGABYTES(64);
 	playground_memory.transient_storage_size = GIGABYTES(1);
 
@@ -556,7 +563,7 @@ int WINAPI WinMain(HINSTANCE instance,
 
 	state.memory = VirtualAlloc(0, (SIZE_T)state.memory_size,
 								 MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-	
+
 	playground_memory.permanent_storage = state.memory;
 	playground_memory.transient_storage = (u8*)playground_memory.permanent_storage + playground_memory.permanent_storage_size;
 
@@ -567,7 +574,7 @@ int WINAPI WinMain(HINSTANCE instance,
 												 CREATE_ALWAYS,
 												 FILE_ATTRIBUTE_NORMAL,
 												 0);
-	
+
 	LARGE_INTEGER total_size;
 	total_size.QuadPart = state.memory_size;
 	state.replay.state_file_map = CreateFileMappingA(state.replay.state_file_handle,
@@ -576,22 +583,22 @@ int WINAPI WinMain(HINSTANCE instance,
 													 total_size.HighPart,
 													 total_size.LowPart,
 													 0);
-	
+
 	state.replay.map_view =  MapViewOfFile(state.replay.state_file_map,
 										   FILE_MAP_WRITE | FILE_MAP_READ,
 										   0,
 										   0,
 										   state.memory_size);
-	
+
 	Win32PlaygroundCode playground_code =
 		Win32LoadPlaygroundCode(dll_file_destination,
 								temp_dll_file_destination,
 								lock_file_destination);
-	
+
 	PlaygroundInput playground_input[2] = {};
 	PlaygroundInput* old_playground_input = &playground_input[0];
 	PlaygroundInput* new_playground_input = &playground_input[1];
-	
+
 	f32 delta_time_for_frame = 0.0f;
 	global_running = true;
 	while (global_running) {
@@ -603,8 +610,9 @@ int WINAPI WinMain(HINSTANCE instance,
 
 		for (u32 button_index = 0; button_index < ARRAY_COUNT(new_playground_input->buttons); ++button_index) {
 			new_playground_input->buttons[button_index] = old_playground_input->buttons[button_index];
+			new_playground_input->buttons[button_index].is_released = 0;
 		}
-		
+
 		POINT mouse_position;
 		GetCursorPos(&mouse_position);
 
@@ -618,10 +626,10 @@ int WINAPI WinMain(HINSTANCE instance,
 		// SetRect(&client_rect,
 		// 		client_rect_left_top.x, client_rect_left_top.y,
 		// 		client_rect_bottom_right.x, client_rect_bottom_right.y);
-		
+
 		new_playground_input->mouse_x = mouse_position.x - client_rect_left_top.x;
 		new_playground_input->mouse_y = mouse_position.y - client_rect_left_top.y;
-		
+
 		new_playground_input->mouse_x = global_display_buffer.width * new_playground_input->mouse_x / global_display_buffer.destination_width;
 		new_playground_input->mouse_y = global_display_buffer.height * new_playground_input->mouse_y / global_display_buffer.destination_height;
 
@@ -653,11 +661,11 @@ int WINAPI WinMain(HINSTANCE instance,
 		if (state.input_record) {
 			Win32InputRecord(&state, new_playground_input);
 		}
-		
+
 		if (state.input_playback) {
 			Win32InputPlayback(&state, new_playground_input);
 		}
-		
+
 		if (playground_code.is_valid) {
 			playground_code.update_and_render(&playground_memory, &playground_display_buffer, new_playground_input);
 		}
@@ -669,15 +677,12 @@ int WINAPI WinMain(HINSTANCE instance,
 		ReleaseDC(window_handle, device_context);
 
 		SWAP(old_playground_input, new_playground_input, PlaygroundInput*);
-		// PlaygroundInput* temp = old_playground_input;
-		// old_playground_input = new_playground_input;
-		// new_playground_input = temp;
-
+		
 		Win32TimerEndFrame(&timer, target_seconds_per_frame);
 
 		LARGE_INTEGER flip_counts = Win32GetCounts();
 		delta_time_for_frame = Win32GetSecondsElapsed(timer.begin_counts, flip_counts, timer.frequency);
-		
+
 		f32 milliseconds_per_frame = 1000.0f * delta_time_for_frame;
 		// char fps_buffer[256];
 		// _snprintf_s(fps_buffer, sizeof(fps_buffer), "%.02f milliseconds/frame\n", milliseconds_per_frame);
