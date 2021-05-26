@@ -51,6 +51,9 @@ struct World
 	u32 tile_map_count_y;
 	TileMap* tile_maps;
 
+	u32 active_entity_count;
+	u32 active_entity_indices[1024];
+
 	u32 entity_count;
 	Entity entities[4096];
 };

@@ -151,7 +151,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 						memory->permanent_storage_size - sizeof(*playground_state),
 						(u8*)memory->permanent_storage + sizeof(*playground_state));
 
-		world->tile_map_count_x = 3;
+		world->tile_map_count_x = 10;
 		world->tile_map_count_y = 1;
 		world->tile_maps =
 			PushArray(&playground_state->arena, world->tile_map_count_x * world->tile_map_count_y, TileMap);
@@ -282,7 +282,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 			world->camera_movement_duration;
 
 		// NOTE(SSJSR): Update first entities.
-		SetCameraLocationAndUpdateEntities(world, world->camera, true);
+		// SetCameraLocationAndUpdateEntities(world, world->camera, true);
 
 		memory->is_initialized = true;
 	}
@@ -320,21 +320,37 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 			(v2((f32)(display_buffer->width / 2), (f32)(display_buffer->height / 2)) -
 			 v2((f32)input->mouse_x, (f32)input->mouse_y)) * (1.0f / world->tile_side_in_pixels);
 	}
-	
+
 	if (input->mouse_middle.is_down) {
 		playground_state->screen_center = v2((f32)(display_buffer->width / 2), (f32)(display_buffer->height / 2));
 	}
 
+	if (input->numpad_2.is_down) {
+		world->meters_to_pixels += 1.0f;
+	}
+
+	if (input->numpad_3.is_down) {
+		world->meters_to_pixels -= 1.0f;
+	}
+
+	if (input->numpad_4.is_down) {
+		world->meters_to_pixels = world->tile_side_in_pixels / world->tile_side_in_meters;
+	}
+
+	SetCameraLocationAndUpdateEntities(world, world->camera);
+
 	DrawBitmap(display_buffer, &playground_state->background,
 			   0, 0);
+	
+	local_persist u32 ball = 0;
+	// for (u32 entity_index = 1;
+	// 	 entity_index < world->entity_count;
+	// 	 ++entity_index) {
+	for (u32 active_entity_index_index = 0; active_entity_index_index < world->active_entity_count; ++active_entity_index_index) {
 
-	for (u32 entity_index = 1;
-		 entity_index < world->entity_count;
-		 ++entity_index) {
-
-		// u32 entity_index = current_tile_map->entity_indices[entity_index_index];
+		u32 entity_index = world->active_entity_indices[active_entity_index_index];
 		Entity* entity = GetEntity(world, entity_index);
-		TilePosition old_entity_tile_position = entity->tile_position;
+
 		if (!IsFlagSet(entity, EntityFlag::NONSPATIAL_FLAG)) {
 
 			f32 entity_ground_point_x = playground_state->screen_center.x + world->meters_to_pixels * entity->position.x;
@@ -390,8 +406,15 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 				b32 flip_horizontally = entity->facing_direction == 1 ? true : false;
 
-				UpdateBall(world, entity_index, entity, input->delta_time_for_frame);
+				// UpdateBall(world, entity_index, entity, input->delta_time_for_frame);
 
+				MoveEntity(world, entity_index, entity, entity->direction, input->delta_time_for_frame);
+				++ball;
+				if (entity->distance_limit == 0.0f) {
+					MakeEntityNonspatialAndDeleteFromTileMap(world, entity, entity_index);
+					ball = 0;
+				}
+					
 				DrawBitmap(display_buffer, fireball,
 						   entity_ground_point_x, entity_ground_point_y,
 						   fireball->align_x,
@@ -424,6 +447,13 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 										1,
 										0.15f, 0.15f, 0.15f);
 			}
+
+			TilePosition new_tile_position =
+				IsFlagSet(entity, EntityFlag::NONSPATIAL_FLAG) ?
+				InvalidTilePosition() :
+				MapIntoTilePosition(world->camera, entity->position, world->tile_side_in_meters);
+				
+			UpdateEntityTileMapAndTilePosition(world, entity, entity_index, &new_tile_position);
 		}
 	}
 
@@ -433,6 +463,13 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 	new_camera.tile_x = player_entity->tile_position.tile_x;
 	new_camera.xy.x = player_entity->tile_position.xy.x;
 #else
+	// if (player_entity->position.x > 0.5f * world->tile_count_x * world->tile_side_in_meters) {
+	// 	new_camera.tile_x += world->tile_count_x;
+	// }
+	// if (player_entity->position.x < -0.5f * world->tile_count_x * world->tile_side_in_meters) {
+	// 	new_camera.tile_x -= world->tile_count_x;
+	// }
+
 	if (!world->is_camera_moving) {
 		if (player_entity->position.x > 0.5f * world->tile_count_x * world->tile_side_in_meters) {
 			world->desired_camera.tile_x += world->tile_count_x;
@@ -474,5 +511,6 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 #endif
 
-	SetCameraLocationAndUpdateEntities(world, new_camera);
+	world->camera = new_camera;
+
 }

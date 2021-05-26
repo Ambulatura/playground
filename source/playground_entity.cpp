@@ -1,7 +1,5 @@
 inline Entity* GetEntity(World* world, u32 entity_index);
-internal void UpdateEntityPositions(World* world, Entity* entity, u32 entity_index,
-									TilePosition* old_tile_position, TilePosition* new_tile_position);
-
+// internal void UpdateEntityTileMapAndTilePosition(World* world, Entity* entity, u32 entity_index, TilePosition* old_tile_position, TilePosition* new_tile_position);
 
 inline void AddFlag(Entity* entity, u32 flag)
 {
@@ -22,14 +20,14 @@ inline b32 IsFlagSet(Entity* entity, u32 flag)
 
 inline void MakeEntityNonspatial(Entity* entity)
 {
-	entity->flags |= EntityFlag::NONSPATIAL_FLAG;
+	AddFlag(entity, EntityFlag::NONSPATIAL_FLAG);
 	entity->position = InvalidPosition();
 }
 
 inline void MakeEntityNonspatialAndDeleteFromTileMap(World* world, Entity* entity, u32 entity_index)
 {
 	MakeEntityNonspatial(entity);
-	UpdateEntityPositions(world, entity, entity_index, &entity->tile_position, 0);
+	// UpdateEntityTileMapAndTilePosition(world, entity, entity_index, &entity->tile_position, 0);
 }
 
 inline void MakeEntitySpatial(Entity* entity, v2 direction, v2 position, v2 velocity)
@@ -43,21 +41,29 @@ inline void MakeEntitySpatial(Entity* entity, v2 direction, v2 position, v2 velo
 internal void SetCameraLocationAndUpdateEntities(World* world, TilePosition new_camera, b32 first_time=false)
 {
 	// v2 offset_to_new_camera = TilePositionDifference(world->camera, new_camera, world->tile_side_in_meters);
-	world->camera = new_camera;
 
 	// if (first_time || (Length(offset_to_new_camera) != 0.0f)) {
+	
+	// for (u32 active_entity_index_index = 0; active_entity_index_index < world->active_entity_count; ++active_entity_index_index) {
+	// 	world->active_entity_indices[active_entity_index_index] = 0;
+	// }
 
-	i32 camera_span_x = world->tile_count_x * 3;
-	i32 camera_span_y = world->tile_count_y;
-	Rectangle2 camera_bounds = Rectangle2CenterDimension(v2(0.0f, 0.0f),
-														 world->tile_side_in_meters *
-														 v2((f32)camera_span_x, (f32)camera_span_y));
-	i32 lower_limit = (world->camera.tile_x - camera_span_x / 2) < 0 ? 0 : (i32)(world->camera.tile_x - (f32)camera_span_x / 2.0f);
-	i32 upper_limit = (i32)(world->camera.tile_x + (f32)camera_span_x / 2.0f);
-	i32 min_tile_map_index = GetTileMapIndex(world, lower_limit);
-	i32 max_tile_map_index = GetTileMapIndex(world, upper_limit);
+	world->active_entity_count = 0;
+	
+	u32 camera_span_x = world->tile_count_x * 3;
+	u32 camera_span_y = world->tile_count_y;
+	Rectangle2 camera_bounds =
+		Rectangle2CenterDimension(v2(0.0f, 0.0f),
+								  world->tile_side_in_meters *
+								  v2((f32)camera_span_x, (f32)camera_span_y));
+	
+	u32 lower_limit = (u32)(world->camera.tile_x - ((f32)camera_span_x * 0.5f));
+	u32 upper_limit = (u32)(world->camera.tile_x + ((f32)camera_span_x * 0.5f));
+	lower_limit = lower_limit > upper_limit ? 0 : lower_limit;
+	u32 min_tile_map_index = GetTileMapIndex(world, lower_limit);
+	u32 max_tile_map_index = GetTileMapIndex(world, upper_limit);
 
-	for (i32 tile_map_index = min_tile_map_index; tile_map_index <= max_tile_map_index; ++tile_map_index)  {
+	for (u32 tile_map_index = min_tile_map_index; tile_map_index <= max_tile_map_index; ++tile_map_index)  {
 		TileMap* tile_map = world->tile_maps + tile_map_index;
 		if (tile_map) {
 			for (u32 entity_index_index = 0; entity_index_index < tile_map->entity_index_count; ++entity_index_index) {
@@ -66,54 +72,59 @@ internal void SetCameraLocationAndUpdateEntities(World* world, TilePosition new_
 
 				if (!IsFlagSet(entity, EntityFlag::NONSPATIAL_FLAG)) {
 					v2 new_position = TilePositionDifference(entity->tile_position, world->camera, world->tile_side_in_meters);
-					if (IsInRectangle2(camera_bounds, new_position)) {
+					// if (IsInRectangle2(camera_bounds, new_position)) {
 						entity->position = new_position;
-					}
+						world->active_entity_indices[world->active_entity_count++] = entity_index;
+						if (entity->ball_index) {
+							Entity* ball = GetEntity(world, entity->ball_index);
+							if (!IsFlagSet(entity, EntityFlag::NONSPATIAL_FLAG)) {
+								world->active_entity_indices[world->active_entity_count++] = entity->ball_index;	
+							}
+							
+						}
+					// }
 				}
 			}
 		}
 	}
-
-	// world->camera = new_camera;
-	// }
 }
 
-internal void UpdateEntityPositions(World* world, Entity* entity, u32 entity_index,
-									TilePosition* old_tile_position, TilePosition* new_tile_position)
+internal void UpdateEntityTileMapAndTilePosition(World* world, Entity* entity, u32 entity_index, TilePosition* new_tile_position)
 {
-	// TilePosition* old_tile_position = &entity->tile_position;
-
+	TilePosition* old_tile_position = &entity->tile_position;
+	
 	if (old_tile_position &&
 		new_tile_position &&
 		AreOnSameTileMap(world, old_tile_position, new_tile_position)) {
 		// NOTE(SSJSR): Do not have to move entity between tile maps.
 
-		entity->tile_position = *new_tile_position;
+		*old_tile_position = *new_tile_position;
 	}
 	else {
 		if (old_tile_position && !IsTilePositionInvalid(old_tile_position)) {
 			TileMap* old_tile_map = GetTileMap(world, old_tile_position->tile_x);
+			if (old_tile_map) {
 
-			for (u32 test_entity_index_index = 0;
-				 test_entity_index_index < old_tile_map->entity_index_count;
-				 ++test_entity_index_index) {
-				u32 test_entity_index = old_tile_map->entity_indices[test_entity_index_index];
-				if (test_entity_index == entity_index) {
-					u32 last_entity_index = old_tile_map->entity_indices[old_tile_map->entity_index_count - 1];
-					old_tile_map->entity_indices[test_entity_index_index] = last_entity_index;
-					old_tile_map->entity_indices[--old_tile_map->entity_index_count] = 0;
-					break;
+				for (u32 test_entity_index_index = 0;
+					 test_entity_index_index < old_tile_map->entity_index_count;
+					 ++test_entity_index_index) {
+					u32 test_entity_index = old_tile_map->entity_indices[test_entity_index_index];
+					if (test_entity_index == entity_index) {
+						u32 last_entity_index = old_tile_map->entity_indices[old_tile_map->entity_index_count - 1];
+						old_tile_map->entity_indices[test_entity_index_index] = last_entity_index;
+						old_tile_map->entity_indices[--old_tile_map->entity_index_count] = 0;
+						break;
+					}
 				}
 			}
 		}
 
 		if (new_tile_position && !IsTilePositionInvalid(new_tile_position)) {
 			TileMap* new_tile_map = GetTileMap(world, new_tile_position->tile_x);
-
-			// Entity* entity = playground_state->entities + entity_index;
-			entity->tile_position = *new_tile_position;
-
-			new_tile_map->entity_indices[new_tile_map->entity_index_count++] = entity_index;
+			if (new_tile_map) {
+				*old_tile_position = *new_tile_position;
+				new_tile_map->entity_indices[new_tile_map->entity_index_count++] = entity_index;
+			}
 		}
 	}
 }
@@ -178,10 +189,15 @@ internal void MoveEntity(World* world, u32 entity_index, Entity* entity, v2 play
 
 			v2 target_position = entity->position + player_position_delta;
 		
-			for (u32 test_entity_index = 1;
-				 test_entity_index < world->entity_count;
-				 ++test_entity_index) {
-			
+			// for (u32 test_entity_index = 1;
+			// 	 test_entity_index < world->entity_count;
+			// 	 ++test_entity_index) {
+			for (u32 test_entity_index_index = 0;
+				 test_entity_index_index < world->active_entity_count;
+				 ++test_entity_index_index) {
+				
+				u32 test_entity_index = world->active_entity_indices[test_entity_index_index];
+
 				if (IsFlagSet(entity, EntityFlag::COLLIDES_FLAG) && !IsFlagSet(entity, EntityFlag::NONSPATIAL_FLAG)) {
 					if (test_entity_index != entity_index) {
 						Entity* test_entity = GetEntity(world, test_entity_index); //playground_state->entities + test_entity_index;
@@ -267,13 +283,13 @@ internal void MoveEntity(World* world, u32 entity_index, Entity* entity, v2 play
 		entity->distance_limit = distance_remaining;
 	}
 
-	if (hitted && entity->type == EntityType::BALL_TYPE) {
-		MakeEntityNonspatialAndDeleteFromTileMap(world, entity, entity_index);
-	}
-	else {
-		TilePosition new_tile_position = MapIntoTilePosition(world->camera, entity->position, world->tile_side_in_meters);
-		UpdateEntityPositions(world, entity, entity_index, &entity->tile_position, &new_tile_position);
-	}
+	// if (hitted && entity->type == EntityType::BALL_TYPE) {
+	// 	MakeEntityNonspatialAndDeleteFromTileMap(world, entity, entity_index);
+	// }
+	// else {
+	// 	TilePosition new_tile_position = MapIntoTilePosition(world->camera, entity->position, world->tile_side_in_meters);
+	// 	UpdateEntityTileMapAndTilePosition(world, entity, entity_index, &entity->tile_position, &new_tile_position);
+	// }
 
 	if (entity->velocity.x < 0.0f) {
 		entity->facing_direction = 1; // Left
@@ -292,18 +308,20 @@ internal u32 AddEntity(World* world, EntityType type, TilePosition* tile_positio
 	Entity* entity = world->entities + entity_index;
 	*entity = {};
 	entity->type = type;
+	entity->tile_position = InvalidTilePosition();
 
 	if (tile_position) {
-		entity->tile_position = *tile_position;
+		UpdateEntityTileMapAndTilePosition(world, entity, entity_index, tile_position);
+
+		// entity->tile_position = *tile_position;
+		// v2 relative_position = TilePositionDifference(entity->tile_position, world->camera, world->tile_side_in_meters);
+		// entity->position = relative_position;
+		// entity->position = InvalidPosition();
 		
-		v2 relative_position = TilePositionDifference(entity->tile_position, world->camera, world->tile_side_in_meters);
-		entity->position = relative_position;
-		
-		TileMap* tile_map = GetTileMap(world, tile_position->tile_x);
-		tile_map->entity_indices[tile_map->entity_index_count++] = entity_index;
+		// TileMap* tile_map = GetTileMap(world, tile_position->tile_x);
+		// tile_map->entity_indices[tile_map->entity_index_count++] = entity_index;
 	}
 	else {
-		entity->tile_position = InvalidTilePosition();
 		MakeEntityNonspatial(entity);
 	}
 	return entity_index;
@@ -324,7 +342,11 @@ inline Entity* GetEntity(World* world, u32 entity_index)
 
 internal u32 AddBall(World* world)
 {
-	u32 entity_index = AddEntity(world, EntityType::BALL_TYPE, 0);
+	// TODO(SSJSR): Think about starting position of non-spatial entities.
+	TilePosition tile_position = {};
+	tile_position.tile_x = 5;
+	tile_position.tile_y = 5;
+	u32 entity_index = AddEntity(world, EntityType::BALL_TYPE, &tile_position);
 
 	Entity* entity = GetEntity(world, entity_index);
 
@@ -407,9 +429,9 @@ inline void UpdateMonster(World* world, u32 entity_index, f32 delta_time)
 
 inline void UpdateBall(World* world, u32 entity_index, Entity* ball_entity, f32 delta_time)
 {
-	MoveEntity(world, entity_index, ball_entity, ball_entity->direction, delta_time);
+	// MoveEntity(world, entity_index, ball_entity, ball_entity->direction, delta_time);
 	
-	if (ball_entity->distance_limit == 0.0f) {
-		MakeEntityNonspatialAndDeleteFromTileMap(world, ball_entity, entity_index);
-	}
+	// if (ball_entity->distance_limit == 0.0f) {
+	// 	MakeEntityNonspatialAndDeleteFromTileMap(world, ball_entity, entity_index);
+	// }
 }
