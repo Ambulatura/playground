@@ -276,17 +276,29 @@ internal void Win32ProcessMessages(Win32State* state, PlaygroundInput* input)
 						Win32ToggleFullscreen(message.hwnd);
 					}
 				}
-				else if (key_code == VK_UP) {
+				else if (key_code == 'W') {
 					Win32ProcessKeyboardInput(&input->move_up, is_down);
 				}
-				else if (key_code == VK_LEFT) {
+				else if (key_code == 'A') {
 					Win32ProcessKeyboardInput(&input->move_left, is_down);
 				}
-				else if (key_code == VK_DOWN) {
+				else if (key_code == 'S') {
 					Win32ProcessKeyboardInput(&input->move_down, is_down);
 				}
-				else if (key_code == VK_RIGHT) {
+				else if (key_code == 'D') {
 					Win32ProcessKeyboardInput(&input->move_right, is_down);
+				}
+				else if (key_code == VK_UP) {
+					Win32ProcessKeyboardInput(&input->up, is_down);
+				}
+				else if (key_code == VK_LEFT) {
+					Win32ProcessKeyboardInput(&input->left, is_down);
+				}
+				else if (key_code == VK_DOWN) {
+					Win32ProcessKeyboardInput(&input->down, is_down);
+				}
+				else if (key_code == VK_RIGHT) {
+					Win32ProcessKeyboardInput(&input->right, is_down);
 				}
 				else if (key_code == VK_NUMPAD0) {
 					Win32ProcessKeyboardInput(&input->numpad_0, is_down);
@@ -305,6 +317,9 @@ internal void Win32ProcessMessages(Win32State* state, PlaygroundInput* input)
 				}
 				else if (key_code == VK_NUMPAD5) {
 					Win32ProcessKeyboardInput(&input->numpad_5, is_down);
+				}
+				else if (key_code == VK_SPACE) {
+					Win32ProcessKeyboardInput(&input->space, is_down);
 				}
 				else if (key_code == 'L') {
 					if (is_down) {
@@ -342,6 +357,16 @@ internal void Win32ProcessMessages(Win32State* state, PlaygroundInput* input)
 			} break;
 			case WM_MBUTTONUP: {
 				Win32ProcessKeyboardInput(&input->mouse_middle, false);
+			} break;
+			case WM_MOUSEWHEEL: {
+				input->scrolling = true;
+				i16 wheel_delta = (i16)(message.wParam >> 16);
+				if (wheel_delta > 0) {
+					input->wheel_moving_forward = true;
+				}
+				else {
+					input->wheel_moving_forward = false;
+				}
 			} break;
 			default: {
 				TranslateMessage(&message);
@@ -677,7 +702,7 @@ int WINAPI WinMain(HINSTANCE instance,
 		ReleaseDC(window_handle, device_context);
 
 		SWAP(old_playground_input, new_playground_input, PlaygroundInput*);
-		
+
 		Win32TimerEndFrame(&timer, target_seconds_per_frame);
 
 		LARGE_INTEGER flip_counts = Win32GetCounts();

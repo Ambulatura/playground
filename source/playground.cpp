@@ -321,19 +321,20 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 			 v2((f32)input->mouse_x, (f32)input->mouse_y)) * (1.0f / world->tile_side_in_pixels);
 	}
 
-	if (input->mouse_middle.is_down) {
+	if (input->mouse_right.is_down) {
 		playground_state->screen_center = v2((f32)(display_buffer->width / 2), (f32)(display_buffer->height / 2));
 	}
 
-	if (input->numpad_2.is_down) {
-		world->meters_to_pixels += 1.0f;
+	if (input->scrolling) {
+		if (input->wheel_moving_forward) {
+			world->meters_to_pixels += 1.0f;
+		}
+		else {
+			world->meters_to_pixels -= 1.0f;
+		}
 	}
-
-	if (input->numpad_3.is_down) {
-		world->meters_to_pixels -= 1.0f;
-	}
-
-	if (input->numpad_4.is_down) {
+	
+	if (input->mouse_middle.is_down) {
 		world->meters_to_pixels = world->tile_side_in_pixels / world->tile_side_in_meters;
 	}
 
@@ -342,7 +343,6 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 	DrawBitmap(display_buffer, &playground_state->background,
 			   0, 0);
 	
-	local_persist u32 ball = 0;
 	// for (u32 entity_index = 1;
 	// 	 entity_index < world->entity_count;
 	// 	 ++entity_index) {
@@ -374,10 +374,10 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				if (player_bitmap == &playground_state->player_cast_03) {
 					ball_entity->distance_limit = 5.0f;
 					f32 direction_x = entity->facing_direction == 1 ? -1.0f : 1.0f;
-					MakeEntitySpatial(ball_entity,
-									  v2(direction_x, 0.0f),
-									  v2(entity->position.x + 1.0f * direction_x,
-										 entity->position.y + entity->height * 0.4f),
+					MakeEntitySpatialAndAddToTileMap(world, ball_entity, entity->ball_index,
+													 v2(direction_x, 0.0f),
+													 v2(entity->position.x + 1.0f * direction_x,
+														entity->position.y + entity->height * 0.4f),
 									  v2(10.0f * direction_x, 0.0f));
 				}
 
@@ -409,10 +409,8 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				// UpdateBall(world, entity_index, entity, input->delta_time_for_frame);
 
 				MoveEntity(world, entity_index, entity, entity->direction, input->delta_time_for_frame);
-				++ball;
 				if (entity->distance_limit == 0.0f) {
 					MakeEntityNonspatialAndDeleteFromTileMap(world, entity, entity_index);
-					ball = 0;
 				}
 					
 				DrawBitmap(display_buffer, fireball,

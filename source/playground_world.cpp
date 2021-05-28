@@ -69,7 +69,7 @@ inline TileMap* GetTileMap(World* world, u32 tile_x)
 {
 	u32 tile_map_index = GetTileMapIndex(world, tile_x);
 
-	// ASSERT(tile_map_index < world->tile_map_count_x);
+	ASSERT(tile_map_index < world->tile_map_count_x);
 
 	TileMap* result = world->tile_maps + tile_map_index;
 

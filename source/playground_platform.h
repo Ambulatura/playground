@@ -80,10 +80,13 @@ struct PlaygroundInput
 	
 	i32 mouse_x;
 	i32 mouse_y;
+
+	b32 scrolling;
+	b32 wheel_moving_forward;
 	
 	union
 	{
-		PlaygroundButton buttons[16];
+		PlaygroundButton buttons[21];
 
 		struct
 		{
@@ -91,6 +94,13 @@ struct PlaygroundInput
 			PlaygroundButton move_left;
 			PlaygroundButton move_down;
 			PlaygroundButton move_right;
+
+			PlaygroundButton up;
+			PlaygroundButton left;
+			PlaygroundButton down;
+			PlaygroundButton right;
+
+			PlaygroundButton space;
 
 			PlaygroundButton numpad_0;
 			PlaygroundButton numpad_1;
