@@ -100,6 +100,18 @@ inline f32 Length(v2 v)
 	return result;
 }
 
+inline v2 HadamardProduct(v2 a, v2 b)
+{
+	v2 result = {
+		a.x * b.x,
+		a.y * b.y
+	};
+
+	return result;
+}
+
+// NOTE(SSJSR):  Rectangle2
+
 struct Rectangle2
 {
 	v2 min;

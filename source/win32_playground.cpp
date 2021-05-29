@@ -255,126 +255,126 @@ internal void Win32InputPlayback(Win32State* state, PlaygroundInput* new_playgro
 	}
 }
 
-internal void Win32ProcessMessages(Win32State* state, PlaygroundInput* input)
-{
-	MSG message;
-	while (PeekMessage(&message, 0, 0, 0, PM_REMOVE)) {
-		switch (message.message) {
-			case WM_SYSKEYDOWN:
-			case WM_SYSKEYUP:
-			case WM_KEYDOWN:
-			case WM_KEYUP: {
-				u32 key_code = (u32)message.wParam;
-				b32 was_down = (message.lParam & (1 << 30));
-				b32 is_down = !(message.lParam & (1 << 31));
-				b32 alt_is_down = (message.lParam & (1 << 29));
+// internal void Win32ProcessMessages(Win32State* state, PlaygroundInput* input)
+// {
+// 	MSG message;
+// 	while (PeekMessage(&message, 0, 0, 0, PM_REMOVE)) {
+// 		switch (message.message) {
+// 			case WM_SYSKEYDOWN:
+// 			case WM_SYSKEYUP:
+// 			case WM_KEYDOWN:
+// 			case WM_KEYUP: {
+// 				u32 key_code = (u32)message.wParam;
+// 				b32 was_down = (message.lParam & (1 << 30));
+// 				b32 is_down = !(message.lParam & (1 << 31));
+// 				b32 alt_is_down = (message.lParam & (1 << 29));
 
-				Win32ProcessKeyboardInput(&input->alt_key, alt_is_down);
+// 				Win32ProcessKeyboardInput(&input->alt_key, alt_is_down);
 
-				if (key_code == VK_RETURN) {
-					if (is_down && alt_is_down) {
-						Win32ToggleFullscreen(message.hwnd);
-					}
-				}
-				else if (key_code == 'W') {
-					Win32ProcessKeyboardInput(&input->move_up, is_down);
-				}
-				else if (key_code == 'A') {
-					Win32ProcessKeyboardInput(&input->move_left, is_down);
-				}
-				else if (key_code == 'S') {
-					Win32ProcessKeyboardInput(&input->move_down, is_down);
-				}
-				else if (key_code == 'D') {
-					Win32ProcessKeyboardInput(&input->move_right, is_down);
-				}
-				else if (key_code == VK_UP) {
-					Win32ProcessKeyboardInput(&input->up, is_down);
-				}
-				else if (key_code == VK_LEFT) {
-					Win32ProcessKeyboardInput(&input->left, is_down);
-				}
-				else if (key_code == VK_DOWN) {
-					Win32ProcessKeyboardInput(&input->down, is_down);
-				}
-				else if (key_code == VK_RIGHT) {
-					Win32ProcessKeyboardInput(&input->right, is_down);
-				}
-				else if (key_code == VK_NUMPAD0) {
-					Win32ProcessKeyboardInput(&input->numpad_0, is_down);
-				}
-				else if (key_code == VK_NUMPAD1) {
-					Win32ProcessKeyboardInput(&input->numpad_1, is_down);
-				}
-				else if (key_code == VK_NUMPAD2) {
-					Win32ProcessKeyboardInput(&input->numpad_2, is_down);
-				}
-				else if (key_code == VK_NUMPAD3) {
-					Win32ProcessKeyboardInput(&input->numpad_3, is_down);
-				}
-				else if (key_code == VK_NUMPAD4) {
-					Win32ProcessKeyboardInput(&input->numpad_4, is_down);
-				}
-				else if (key_code == VK_NUMPAD5) {
-					Win32ProcessKeyboardInput(&input->numpad_5, is_down);
-				}
-				else if (key_code == VK_SPACE) {
-					Win32ProcessKeyboardInput(&input->space, is_down);
-				}
-				else if (key_code == 'L') {
-					if (is_down) {
-						if (state->input_record && !state->input_playback) {
-							Win32EndInputRecord(state);
-							Win32BeginInputPlayback(state);
-							state->input_record = false;
-							state->input_playback = true;
-						}
-						else if (state->input_playback) {
-							Win32EndInputPlayback(state);
-							state->input_playback = false;
-						}
-						else if (!state->input_record) {
-							Win32BeginInputRecord(state);
-							state->input_record = true;
-						}
-					}
-				}
-			} break;
-			case WM_LBUTTONDOWN: {
-				Win32ProcessKeyboardInput(&input->mouse_left, true);
-			} break;
-			case WM_LBUTTONUP: {
-				Win32ProcessKeyboardInput(&input->mouse_left, false);
-			} break;
-			case WM_RBUTTONDOWN: {
-				Win32ProcessKeyboardInput(&input->mouse_right, true);
-			} break;
-			case WM_RBUTTONUP: {
-				Win32ProcessKeyboardInput(&input->mouse_right, false);
-			} break;
-			case WM_MBUTTONDOWN: {
-				Win32ProcessKeyboardInput(&input->mouse_middle, true);
-			} break;
-			case WM_MBUTTONUP: {
-				Win32ProcessKeyboardInput(&input->mouse_middle, false);
-			} break;
-			case WM_MOUSEWHEEL: {
-				input->scrolling = true;
-				i16 wheel_delta = (i16)(message.wParam >> 16);
-				if (wheel_delta > 0) {
-					input->wheel_moving_forward = true;
-				}
-				else {
-					input->wheel_moving_forward = false;
-				}
-			} break;
-			default: {
-				TranslateMessage(&message);
-				DispatchMessage(&message);
-			} break;
-		}
-	}
-}
+// 				if (key_code == VK_RETURN) {
+// 					if (is_down && alt_is_down) {
+// 						Win32ToggleFullscreen(message.hwnd);
+// 					}
+// 				}
+// 				else if (key_code == 'W') {
+// 					Win32ProcessKeyboardInput(&input->move_up, is_down);
+// 				}
+// 				else if (key_code == 'A') {
+// 					Win32ProcessKeyboardInput(&input->move_left, is_down);
+// 				}
+// 				else if (key_code == 'S') {
+// 					Win32ProcessKeyboardInput(&input->move_down, is_down);
+// 				}
+// 				else if (key_code == 'D') {
+// 					Win32ProcessKeyboardInput(&input->move_right, is_down);
+// 				}
+// 				else if (key_code == VK_UP) {
+// 					Win32ProcessKeyboardInput(&input->up, is_down);
+// 				}
+// 				else if (key_code == VK_LEFT) {
+// 					Win32ProcessKeyboardInput(&input->left, is_down);
+// 				}
+// 				else if (key_code == VK_DOWN) {
+// 					Win32ProcessKeyboardInput(&input->down, is_down);
+// 				}
+// 				else if (key_code == VK_RIGHT) {
+// 					Win32ProcessKeyboardInput(&input->right, is_down);
+// 				}
+// 				else if (key_code == VK_NUMPAD0) {
+// 					Win32ProcessKeyboardInput(&input->numpad_0, is_down);
+// 				}
+// 				else if (key_code == VK_NUMPAD1) {
+// 					Win32ProcessKeyboardInput(&input->numpad_1, is_down);
+// 				}
+// 				else if (key_code == VK_NUMPAD2) {
+// 					Win32ProcessKeyboardInput(&input->numpad_2, is_down);
+// 				}
+// 				else if (key_code == VK_NUMPAD3) {
+// 					Win32ProcessKeyboardInput(&input->numpad_3, is_down);
+// 				}
+// 				else if (key_code == VK_NUMPAD4) {
+// 					Win32ProcessKeyboardInput(&input->numpad_4, is_down);
+// 				}
+// 				else if (key_code == VK_NUMPAD5) {
+// 					Win32ProcessKeyboardInput(&input->numpad_5, is_down);
+// 				}
+// 				else if (key_code == VK_SPACE) {
+// 					Win32ProcessKeyboardInput(&input->space, is_down);
+// 				}
+// 				else if (key_code == 'L') {
+// 					if (is_down) {
+// 						if (state->input_record && !state->input_playback) {
+// 							Win32EndInputRecord(state);
+// 							Win32BeginInputPlayback(state);
+// 							state->input_record = false;
+// 							state->input_playback = true;
+// 						}
+// 						else if (state->input_playback) {
+// 							Win32EndInputPlayback(state);
+// 							state->input_playback = false;
+// 						}
+// 						else if (!state->input_record) {
+// 							Win32BeginInputRecord(state);
+// 							state->input_record = true;
+// 						}
+// 					}
+// 				}
+// 			} break;
+// 			case WM_LBUTTONDOWN: {
+// 				Win32ProcessKeyboardInput(&input->mouse_left, true);
+// 			} break;
+// 			case WM_LBUTTONUP: {
+// 				Win32ProcessKeyboardInput(&input->mouse_left, false);
+// 			} break;
+// 			case WM_RBUTTONDOWN: {
+// 				Win32ProcessKeyboardInput(&input->mouse_right, true);
+// 			} break;
+// 			case WM_RBUTTONUP: {
+// 				Win32ProcessKeyboardInput(&input->mouse_right, false);
+// 			} break;
+// 			case WM_MBUTTONDOWN: {
+// 				Win32ProcessKeyboardInput(&input->mouse_middle, true);
+// 			} break;
+// 			case WM_MBUTTONUP: {
+// 				Win32ProcessKeyboardInput(&input->mouse_middle, false);
+// 			} break;
+// 			case WM_MOUSEWHEEL: {
+// 				input->scrolling = true;
+// 				i16 wheel_delta = (i16)(message.wParam >> 16);
+// 				if (wheel_delta > 0) {
+// 					input->wheel_moving_forward = true;
+// 				}
+// 				else {
+// 					input->wheel_moving_forward = false;
+// 				}
+// 			} break;
+// 			default: {
+// 				TranslateMessage(&message);
+// 				DispatchMessage(&message);
+// 			} break;
+// 		}
+// 	}
+// }
 
 internal LRESULT CALLBACK Win32WindowProc(HWND window_handle,
 										  UINT message,
@@ -382,28 +382,173 @@ internal LRESULT CALLBACK Win32WindowProc(HWND window_handle,
 										  LPARAM l_param)
 {
 	LRESULT result = 0;
+	
+	switch (message) {
+		case WM_CREATE: {
+			Win32MessageLoopInformation* information =
+				(Win32MessageLoopInformation*)((CREATESTRUCTA*)l_param)->lpCreateParams;
+			SetWindowLongPtr(window_handle, GWLP_USERDATA, (LONG_PTR)information);
+		} break;
+		
+		case WM_PAINT: {
+			PAINTSTRUCT paint_struct;
+			HDC device_context = BeginPaint(window_handle, &paint_struct);
 
-	if (message == WM_PAINT) {
-		PAINTSTRUCT paint_struct;
-		HDC device_context = BeginPaint(window_handle, &paint_struct);
+			Win32WindowSize window_size = Win32GetWindowSize(window_handle);
+			Win32ShowDisplayBufferInWindow(device_context, &global_display_buffer,
+										   window_size.width, window_size.height);
 
-		Win32WindowSize window_size = Win32GetWindowSize(window_handle);
-		Win32ShowDisplayBufferInWindow(device_context, &global_display_buffer,
-									   window_size.width, window_size.height);
+			EndPaint(window_handle, &paint_struct);
+		} break;
 
-		EndPaint(window_handle, &paint_struct);
-	}
-	else if (message == WM_DESTROY || message == WM_CLOSE) {
-		global_running = false;
-	}
-	else if (message == WM_SYSCHAR) {
-		// NOTE(SSJSR): This WM_SYSCHAR message is handled to prevent
-		// *beep* sound that Windows produces when ALT key is pressed.
-	}
-	else {
-		result = DefWindowProcA(window_handle, message, w_param, l_param);
-	}
+		case WM_SYSCHAR: {
+			// NOTE(SSJSR): This WM_SYSCHAR message is handled to prevent
+			// *beep* sound that Windows produces when ALT key is pressed.
+		} break;
 
+		case WM_DESTROY:
+		case WM_CLOSE: {
+			global_running = false;
+		} break;
+			
+		case WM_SYSKEYDOWN:
+		case WM_SYSKEYUP:
+		case WM_KEYDOWN:
+		case WM_KEYUP: {
+			u32 key_code = (u32)w_param;
+			b32 was_down = (l_param & (1 << 30));
+			b32 is_down = !(l_param & (1 << 31));
+			b32 alt_is_down = (l_param & (1 << 29));
+
+			// char message_buffer[256];
+			// _snprintf_s(message_buffer, sizeof(message_buffer), "Message: %i, is_down: %i \n", message, is_down);
+
+			// OutputDebugStringA(message_buffer);
+
+			Win32MessageLoopInformation* information =
+				(Win32MessageLoopInformation*)GetWindowLongPtr(window_handle, GWLP_USERDATA);
+			
+			PlaygroundInput* input = &information->new_input;
+
+			Win32ProcessKeyboardInput(&input->alt_key, alt_is_down);
+
+			if (key_code == VK_RETURN) {
+				if (is_down && alt_is_down) {
+					Win32ToggleFullscreen(window_handle);
+				}
+			}
+			else if (key_code == 'W') {
+				Win32ProcessKeyboardInput(&input->move_up, is_down);
+			}
+			else if (key_code == 'A') {
+				Win32ProcessKeyboardInput(&input->move_left, is_down);
+			}
+			else if (key_code == 'S') {
+				Win32ProcessKeyboardInput(&input->move_down, is_down);
+			}
+			else if (key_code == 'D') {
+				Win32ProcessKeyboardInput(&input->move_right, is_down);
+			}
+			else if (key_code == VK_UP) {
+				Win32ProcessKeyboardInput(&input->up, is_down);
+			}
+			else if (key_code == VK_LEFT) {
+				Win32ProcessKeyboardInput(&input->left, is_down);
+			}
+			else if (key_code == VK_DOWN) {
+				Win32ProcessKeyboardInput(&input->down, is_down);
+			}
+			else if (key_code == VK_RIGHT) {
+				Win32ProcessKeyboardInput(&input->right, is_down);
+			}
+			else if (key_code == VK_NUMPAD0) {
+				Win32ProcessKeyboardInput(&input->numpad_0, is_down);
+			}
+			else if (key_code == VK_NUMPAD1) {
+				Win32ProcessKeyboardInput(&input->numpad_1, is_down);
+			}
+			else if (key_code == VK_NUMPAD2) {
+				Win32ProcessKeyboardInput(&input->numpad_2, is_down);
+			}
+			else if (key_code == VK_NUMPAD3) {
+				Win32ProcessKeyboardInput(&input->numpad_3, is_down);
+			}
+			else if (key_code == VK_NUMPAD4) {
+				Win32ProcessKeyboardInput(&input->numpad_4, is_down);
+			}
+			else if (key_code == VK_NUMPAD5) {
+				Win32ProcessKeyboardInput(&input->numpad_5, is_down);
+			}
+			else if (key_code == VK_SPACE) {
+				Win32ProcessKeyboardInput(&input->space, is_down);
+			}
+			else if (key_code == 'L') {
+				Win32State* state = &information->state;
+				if (is_down) {
+					if (state->input_record && !state->input_playback) {
+						Win32EndInputRecord(state);
+						Win32BeginInputPlayback(state);
+						state->input_record = false;
+						state->input_playback = true;
+					}
+					else if (state->input_playback) {
+						Win32EndInputPlayback(state);
+						state->input_playback = false;
+					}
+					else if (!state->input_record) {
+						Win32BeginInputRecord(state);
+						state->input_record = true;
+					}
+				}
+			}
+		} break;
+		case WM_LBUTTONDOWN:
+		case WM_LBUTTONUP:
+		case WM_RBUTTONDOWN:
+		case WM_RBUTTONUP:
+		case WM_MBUTTONDOWN:
+		case WM_MBUTTONUP:
+		case WM_MOUSEWHEEL: {
+			Win32MessageLoopInformation* information =
+				(Win32MessageLoopInformation*)GetWindowLongPtr(window_handle, GWLP_USERDATA);
+			PlaygroundInput* input = &information->new_input;
+
+			if (message == WM_LBUTTONDOWN) {
+				Win32ProcessKeyboardInput(&input->mouse_left, true);				
+			}
+			else if (message == WM_LBUTTONUP) {
+				Win32ProcessKeyboardInput(&input->mouse_left, false);				
+			}
+			else if (message == WM_RBUTTONDOWN) {
+				Win32ProcessKeyboardInput(&input->mouse_right, true);
+			}
+			else if (message == WM_RBUTTONUP) {
+				Win32ProcessKeyboardInput(&input->mouse_right, false);
+			}
+			else if (message == WM_MBUTTONDOWN) {
+				Win32ProcessKeyboardInput(&input->mouse_middle, true);
+			}
+			else if (message == WM_MBUTTONUP) {
+				Win32ProcessKeyboardInput(&input->mouse_middle, false);
+			}
+			else if (message == WM_MOUSEWHEEL) {
+				input->scrolling = true;
+				i16 wheel_delta = (i16)(w_param >> 16);
+				if (wheel_delta > 0) {
+					input->wheel_moving_forward = true;
+				}
+				else {
+					input->wheel_moving_forward = false;
+				}
+			}
+			
+		} break;
+			
+		default: {
+			result = DefWindowProcA(window_handle, message, w_param, l_param);
+		} break;
+	};
+	
 	return result;
 }
 
@@ -511,24 +656,25 @@ int WINAPI WinMain(HINSTANCE instance,
 
 	Win32ResizeDisplayBuffer(&global_display_buffer, 960, 540);
 
-	Win32State state = {};
+	Win32MessageLoopInformation information = {};
+	Win32State* state = &information.state;
 
-	Win32FindExecutableFilePath(&state);
+	Win32FindExecutableFilePath(state);
 
 	char dll_file_destination[MAX_FILE_PATH];
-	Win32BuildFilenameOnExecutablePath(&state, "playground.dll", dll_file_destination, sizeof(dll_file_destination));
+	Win32BuildFilenameOnExecutablePath(state, "playground.dll", dll_file_destination, sizeof(dll_file_destination));
 	char temp_dll_file_destination[MAX_FILE_PATH];
-	Win32BuildFilenameOnExecutablePath(&state, "playground_temp.dll", temp_dll_file_destination, sizeof(temp_dll_file_destination));
+	Win32BuildFilenameOnExecutablePath(state, "playground_temp.dll", temp_dll_file_destination, sizeof(temp_dll_file_destination));
 	char lock_file_destination[MAX_FILE_PATH];
-	Win32BuildFilenameOnExecutablePath(&state, "lock.tmp", lock_file_destination, sizeof(lock_file_destination));
+	Win32BuildFilenameOnExecutablePath(state, "lock.tmp", lock_file_destination, sizeof(lock_file_destination));
 
 	char replay_state_file_destination[MAX_FILE_PATH];
-	Win32BuildFilenameOnExecutablePath(&state, "replay_state.bin", replay_state_file_destination, sizeof(replay_state_file_destination));
+	Win32BuildFilenameOnExecutablePath(state, "replay_state.bin", replay_state_file_destination, sizeof(replay_state_file_destination));
 	char replay_input_file_destination[MAX_FILE_PATH];
-	Win32BuildFilenameOnExecutablePath(&state, "replay_input.bin", replay_input_file_destination, sizeof(replay_input_file_destination));
+	Win32BuildFilenameOnExecutablePath(state, "replay_input.bin", replay_input_file_destination, sizeof(replay_input_file_destination));
 
-	state.replay_state_file_name = (char*)replay_state_file_destination;
-	state.replay_input_file_name = (char*)replay_input_file_destination;
+	state->replay_state_file_name = (char*)replay_state_file_destination;
+	state->replay_input_file_name = (char*)replay_input_file_destination;
 
 	WNDCLASSA window_class = {};
 
@@ -555,7 +701,7 @@ int WINAPI WinMain(HINSTANCE instance,
 						0,
 						0,
 						instance,
-						0);
+						&information);
 
 	if (!window_handle) {
 		// TODO(SSJSR): Logging and assert?
@@ -580,19 +726,19 @@ int WINAPI WinMain(HINSTANCE instance,
 	playground_memory.permanent_storage_size = MEGABYTES(64);
 	playground_memory.transient_storage_size = GIGABYTES(1);
 
-	state.memory_size = playground_memory.permanent_storage_size + playground_memory.transient_storage_size;
+	state->memory_size = playground_memory.permanent_storage_size + playground_memory.transient_storage_size;
 
 	// TODO(SSJSR): Maybe we will need base address for hot loading.
 	// void* storage = VirtualAlloc(0, (SIZE_T)playground_memory.permanent_storage_size + playground_memory.transient_storage_size,
 	// 							 MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
-	state.memory = VirtualAlloc(0, (SIZE_T)state.memory_size,
+	state->memory = VirtualAlloc(0, (SIZE_T)state->memory_size,
 								 MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
-	playground_memory.permanent_storage = state.memory;
+	playground_memory.permanent_storage = state->memory;
 	playground_memory.transient_storage = (u8*)playground_memory.permanent_storage + playground_memory.permanent_storage_size;
 
-	state.replay.state_file_handle = CreateFileA(state.replay_state_file_name,
+	state->replay.state_file_handle = CreateFileA(state->replay_state_file_name,
 												 GENERIC_READ | GENERIC_WRITE,
 												 0,
 												 0,
@@ -601,28 +747,33 @@ int WINAPI WinMain(HINSTANCE instance,
 												 0);
 
 	LARGE_INTEGER total_size;
-	total_size.QuadPart = state.memory_size;
-	state.replay.state_file_map = CreateFileMappingA(state.replay.state_file_handle,
+	total_size.QuadPart = state->memory_size;
+	state->replay.state_file_map = CreateFileMappingA(state->replay.state_file_handle,
 													 0,
 													 PAGE_READWRITE,
 													 total_size.HighPart,
 													 total_size.LowPart,
 													 0);
 
-	state.replay.map_view =  MapViewOfFile(state.replay.state_file_map,
+	state->replay.map_view =  MapViewOfFile(state->replay.state_file_map,
 										   FILE_MAP_WRITE | FILE_MAP_READ,
 										   0,
 										   0,
-										   state.memory_size);
+										   state->memory_size);
 
 	Win32PlaygroundCode playground_code =
 		Win32LoadPlaygroundCode(dll_file_destination,
 								temp_dll_file_destination,
 								lock_file_destination);
 
-	PlaygroundInput playground_input[2] = {};
-	PlaygroundInput* old_playground_input = &playground_input[0];
-	PlaygroundInput* new_playground_input = &playground_input[1];
+	// PlaygroundInput playground_input[2] = {};
+	// playground_input[1] = information.new_input;
+	
+	// PlaygroundInput* old_playground_input = &playground_input[0];
+	// PlaygroundInput* new_playground_input = &playground_input[1];
+	PlaygroundInput old_input = {};
+	PlaygroundInput* old_playground_input = &old_input;
+	PlaygroundInput* new_playground_input = &information.new_input;
 
 	f32 delta_time_for_frame = 0.0f;
 	global_running = true;
@@ -637,6 +788,27 @@ int WINAPI WinMain(HINSTANCE instance,
 			new_playground_input->buttons[button_index] = old_playground_input->buttons[button_index];
 			new_playground_input->buttons[button_index].is_released = 0;
 		}
+
+		{
+			MSG message;
+			while (PeekMessageA(&message, 0, 0, 0, PM_REMOVE)) {
+				// if (message.message == WM_QUIT) {
+				// 	global_running = false;
+				// }
+
+				TranslateMessage(&message);
+				DispatchMessage(&message);
+			}
+		}
+
+		// *new_playground_input = {};
+
+		// new_playground_input->delta_time_for_frame = delta_time_for_frame;
+
+		// for (u32 button_index = 0; button_index < ARRAY_COUNT(new_playground_input->buttons); ++button_index) {
+		// 	new_playground_input->buttons[button_index] = old_playground_input->buttons[button_index];
+		// 	new_playground_input->buttons[button_index].is_released = 0;
+		// }
 
 		POINT mouse_position;
 		GetCursorPos(&mouse_position);
@@ -673,7 +845,7 @@ int WINAPI WinMain(HINSTANCE instance,
 													  lock_file_destination);
 		}
 
-		Win32ProcessMessages(&state, new_playground_input);
+		// Win32ProcessMessages(state, new_playground_input);
 
 		PlaygroundDisplayBuffer playground_display_buffer = {};
 		playground_display_buffer.memory = global_display_buffer.memory;
@@ -683,12 +855,12 @@ int WINAPI WinMain(HINSTANCE instance,
 		playground_display_buffer.bytes_per_pixel = global_display_buffer.bytes_per_pixel;
 		playground_display_buffer.size = global_display_buffer.size;
 
-		if (state.input_record) {
-			Win32InputRecord(&state, new_playground_input);
+		if (state->input_record) {
+			Win32InputRecord(state, new_playground_input);
 		}
 
-		if (state.input_playback) {
-			Win32InputPlayback(&state, new_playground_input);
+		if (state->input_playback) {
+			Win32InputPlayback(state, new_playground_input);
 		}
 
 		if (playground_code.is_valid) {
@@ -702,6 +874,9 @@ int WINAPI WinMain(HINSTANCE instance,
 		ReleaseDC(window_handle, device_context);
 
 		SWAP(old_playground_input, new_playground_input, PlaygroundInput*);
+		// PlaygroundInput* temp = new_playground_input;
+		// new_playground_input = old_playground_input;
+		// old_playground_input = temp;
 
 		Win32TimerEndFrame(&timer, target_seconds_per_frame);
 

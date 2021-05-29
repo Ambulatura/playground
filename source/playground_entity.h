@@ -14,6 +14,7 @@ enum EntityFlag
 {
 	COLLIDES_FLAG = (1 << 1),
 	NONSPATIAL_FLAG = (1 << 2),
+	MOVEABLE_FLAG = (1 << 3),
 };
 
 struct Entity
@@ -22,6 +23,7 @@ struct Entity
 	u32 flags;
 
 	v2 direction;
+	v2 acceleration;
 	v2 position;
 	v2 velocity;
 	u32 facing_direction;
@@ -34,6 +36,15 @@ struct Entity
 	f32 distance_limit;
 
 	u32 tick;
+};
+
+struct MoveFeature
+{
+	v2 direction;
+	v2 acceleration;
+
+	f32 friction_coefficient;
+	b32 max_unit_vector_length;
 };
 
 #define PLAYGROUND_ENTITY_H

@@ -309,12 +309,6 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 		playground_state->player_bitmap_state.current_state = PlayerStateType::RUN_STATE_TYPE;
 	}
 
-	f32 direction_length = Length(player_entity->direction);
-	if (direction_length > 1.0f) {
-		f32 ratio = 1.0f / direction_length;
-		player_entity->direction *= ratio;
-	}
-
 	if (input->mouse_left.is_down) {
 		playground_state->screen_center +=
 			(v2((f32)(display_buffer->width / 2), (f32)(display_buffer->height / 2)) -
@@ -353,6 +347,8 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 		if (!IsFlagSet(entity, EntityFlag::NONSPATIAL_FLAG)) {
 
+			MoveFeature move_feature = {};
+
 			f32 entity_ground_point_x = playground_state->screen_center.x + world->meters_to_pixels * entity->position.x;
 			f32 entity_ground_point_y = playground_state->screen_center.y - world->meters_to_pixels * entity->position.y;
 
@@ -362,7 +358,10 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 							   entity_min.y + entity->height * world->meters_to_pixels);
 
 			if (entity->type == EntityType::PLAYER_TYPE) {
-				MoveEntity(world, world->player_entity_index, player_entity, player_entity->direction, input->delta_time_for_frame);
+				move_feature.direction = entity->direction;
+				move_feature.acceleration = v2(50.0f, 50.0f);
+				move_feature.friction_coefficient = 8.0;
+				move_feature.max_unit_vector_length = true;
 
 				Entity* ball_entity = GetEntity(world, entity->ball_index);
 				if (input->numpad_1.is_down && IsFlagSet(ball_entity, EntityFlag::NONSPATIAL_FLAG)) {
@@ -378,7 +377,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 													 v2(direction_x, 0.0f),
 													 v2(entity->position.x + 1.0f * direction_x,
 														entity->position.y + entity->height * 0.4f),
-									  v2(10.0f * direction_x, 0.0f));
+													 v2(10.0f * direction_x, 0.0f));
 				}
 
 				// DrawRectangleWithBorder(display_buffer,
@@ -401,6 +400,9 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 						   flip_horizontally);
 			}
 			else if (entity->type == EntityType::BALL_TYPE) {
+				// move_feature.direction = entity->direction;
+				move_feature.acceleration = v2(60.0f, 0.0f);
+				move_feature.friction_coefficient = 0.0f;
 				playground_state->fireball_bitmap_state.current_state = FireballStateType::CASTING_FIREBALL_STATE_TYPE;
 				LoadedBmp* fireball = GetFireballBitmap(playground_state);
 
@@ -408,7 +410,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 				// UpdateBall(world, entity_index, entity, input->delta_time_for_frame);
 
-				MoveEntity(world, entity_index, entity, entity->direction, input->delta_time_for_frame);
+				// MoveEntity(world, entity_index, entity, input->delta_time_for_frame);
 				if (entity->distance_limit == 0.0f) {
 					MakeEntityNonspatialAndDeleteFromTileMap(world, entity, entity_index);
 				}
@@ -428,7 +430,19 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				// 						true);
 			}
 			else if (entity->type == EntityType::MONSTER_TYPE) {
-				UpdateMonster(world, entity_index, input->delta_time_for_frame);
+				// UpdateMonster(world, entity_index, input->delta_time_for_frame);
+				// entity->direction = v2(1.0f, -1.0f);
+				
+				if (entity->distance_limit == 0.0f) {
+					entity->distance_limit = 20.0f;
+					entity->direction.x *= -1.0f;
+				}
+
+				move_feature.direction = entity->direction;
+				move_feature.acceleration = v2(30.0f, 100.0f);
+				move_feature.friction_coefficient = 8.0f;
+				move_feature.max_unit_vector_length = true;
+				
 				DrawRectangleWithBorder(display_buffer,
 										entity_min.x, entity_min.y,
 										entity_max.x, entity_max.y,
@@ -444,6 +458,10 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 										0.18f, 0.60f, 0.25f,
 										1,
 										0.15f, 0.15f, 0.15f);
+			}
+
+			if (IsFlagSet(entity, EntityFlag::MOVEABLE_FLAG)) {
+				MoveEntity(world, entity_index, entity, input->delta_time_for_frame, &move_feature);
 			}
 
 			TilePosition new_tile_position =

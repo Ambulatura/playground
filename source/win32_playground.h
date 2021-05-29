@@ -52,5 +52,11 @@ struct Win32State
 	char* executable_file_name;
 };
 
+struct Win32MessageLoopInformation
+{
+	Win32State state;
+	PlaygroundInput new_input;
+};
+
 #define WIN32_PLAYGROUND_H
 #endif
