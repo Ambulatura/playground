@@ -55,7 +55,8 @@ struct Win32State
 struct Win32MessageLoopInformation
 {
 	Win32State state;
-	PlaygroundInput new_input;
+	PlaygroundInput* old_playground_input;
+	PlaygroundInput* new_playground_input;
 };
 
 #define WIN32_PLAYGROUND_H

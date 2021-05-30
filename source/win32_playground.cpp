@@ -2,6 +2,7 @@
 
 #include <windows.h>
 #include <stdio.h>
+
 #include "win32_playground.h"
 #include "win32_timer.h"
 #include "win32_timer.cpp"
@@ -382,14 +383,16 @@ internal LRESULT CALLBACK Win32WindowProc(HWND window_handle,
 										  LPARAM l_param)
 {
 	LRESULT result = 0;
-	
+
 	switch (message) {
 		case WM_CREATE: {
 			Win32MessageLoopInformation* information =
 				(Win32MessageLoopInformation*)((CREATESTRUCTA*)l_param)->lpCreateParams;
 			SetWindowLongPtr(window_handle, GWLP_USERDATA, (LONG_PTR)information);
+
+			SetWindowPos(window_handle, NULL, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE);
 		} break;
-		
+
 		case WM_PAINT: {
 			PAINTSTRUCT paint_struct;
 			HDC device_context = BeginPaint(window_handle, &paint_struct);
@@ -407,10 +410,11 @@ internal LRESULT CALLBACK Win32WindowProc(HWND window_handle,
 		} break;
 
 		case WM_DESTROY:
-		case WM_CLOSE: {
+		case WM_CLOSE:
+		case WM_QUIT: {
 			global_running = false;
 		} break;
-			
+
 		case WM_SYSKEYDOWN:
 		case WM_SYSKEYUP:
 		case WM_KEYDOWN:
@@ -420,15 +424,10 @@ internal LRESULT CALLBACK Win32WindowProc(HWND window_handle,
 			b32 is_down = !(l_param & (1 << 31));
 			b32 alt_is_down = (l_param & (1 << 29));
 
-			// char message_buffer[256];
-			// _snprintf_s(message_buffer, sizeof(message_buffer), "Message: %i, is_down: %i \n", message, is_down);
-
-			// OutputDebugStringA(message_buffer);
-
 			Win32MessageLoopInformation* information =
 				(Win32MessageLoopInformation*)GetWindowLongPtr(window_handle, GWLP_USERDATA);
-			
-			PlaygroundInput* input = &information->new_input;
+
+			PlaygroundInput* input = information->new_playground_input;
 
 			Win32ProcessKeyboardInput(&input->alt_key, alt_is_down);
 
@@ -511,13 +510,13 @@ internal LRESULT CALLBACK Win32WindowProc(HWND window_handle,
 		case WM_MOUSEWHEEL: {
 			Win32MessageLoopInformation* information =
 				(Win32MessageLoopInformation*)GetWindowLongPtr(window_handle, GWLP_USERDATA);
-			PlaygroundInput* input = &information->new_input;
+			PlaygroundInput* input = information->new_playground_input;
 
 			if (message == WM_LBUTTONDOWN) {
-				Win32ProcessKeyboardInput(&input->mouse_left, true);				
+				Win32ProcessKeyboardInput(&input->mouse_left, true);
 			}
 			else if (message == WM_LBUTTONUP) {
-				Win32ProcessKeyboardInput(&input->mouse_left, false);				
+				Win32ProcessKeyboardInput(&input->mouse_left, false);
 			}
 			else if (message == WM_RBUTTONDOWN) {
 				Win32ProcessKeyboardInput(&input->mouse_right, true);
@@ -541,14 +540,14 @@ internal LRESULT CALLBACK Win32WindowProc(HWND window_handle,
 					input->wheel_moving_forward = false;
 				}
 			}
-			
+
 		} break;
-			
+
 		default: {
 			result = DefWindowProcA(window_handle, message, w_param, l_param);
 		} break;
 	};
-	
+
 	return result;
 }
 
@@ -766,49 +765,33 @@ int WINAPI WinMain(HINSTANCE instance,
 								temp_dll_file_destination,
 								lock_file_destination);
 
-	// PlaygroundInput playground_input[2] = {};
-	// playground_input[1] = information.new_input;
-	
-	// PlaygroundInput* old_playground_input = &playground_input[0];
-	// PlaygroundInput* new_playground_input = &playground_input[1];
-	PlaygroundInput old_input = {};
-	PlaygroundInput* old_playground_input = &old_input;
-	PlaygroundInput* new_playground_input = &information.new_input;
+	PlaygroundInput playground_input[2] = {};
+
+	information.old_playground_input = &playground_input[0];
+	information.new_playground_input = &playground_input[1];
 
 	f32 delta_time_for_frame = 0.0f;
 	global_running = true;
 	while (global_running) {
 		Win32TimerBeginFrame(&timer);
 
-		*new_playground_input = {};
+		*information.new_playground_input = {};
 
-		new_playground_input->delta_time_for_frame = delta_time_for_frame;
+		information.new_playground_input->delta_time_for_frame = delta_time_for_frame;
 
-		for (u32 button_index = 0; button_index < ARRAY_COUNT(new_playground_input->buttons); ++button_index) {
-			new_playground_input->buttons[button_index] = old_playground_input->buttons[button_index];
-			new_playground_input->buttons[button_index].is_released = 0;
+		for (u32 button_index = 0; button_index < ARRAY_COUNT(information.new_playground_input->buttons); ++button_index) {
+			information.new_playground_input->buttons[button_index] = information.old_playground_input->buttons[button_index];
+			information.new_playground_input->buttons[button_index].is_released = 0;
 		}
 
 		{
 			MSG message;
 			while (PeekMessageA(&message, 0, 0, 0, PM_REMOVE)) {
-				// if (message.message == WM_QUIT) {
-				// 	global_running = false;
-				// }
 
 				TranslateMessage(&message);
-				DispatchMessage(&message);
+				DispatchMessageA(&message);
 			}
 		}
-
-		// *new_playground_input = {};
-
-		// new_playground_input->delta_time_for_frame = delta_time_for_frame;
-
-		// for (u32 button_index = 0; button_index < ARRAY_COUNT(new_playground_input->buttons); ++button_index) {
-		// 	new_playground_input->buttons[button_index] = old_playground_input->buttons[button_index];
-		// 	new_playground_input->buttons[button_index].is_released = 0;
-		// }
 
 		POINT mouse_position;
 		GetCursorPos(&mouse_position);
@@ -820,20 +803,16 @@ int WINAPI WinMain(HINSTANCE instance,
 		ClientToScreen(window_handle, &client_rect_left_top);
 		ClientToScreen(window_handle, &client_rect_bottom_right);
 
-		// SetRect(&client_rect,
-		// 		client_rect_left_top.x, client_rect_left_top.y,
-		// 		client_rect_bottom_right.x, client_rect_bottom_right.y);
+		information.new_playground_input->mouse_x = mouse_position.x - client_rect_left_top.x;
+		information.new_playground_input->mouse_y = mouse_position.y - client_rect_left_top.y;
 
-		new_playground_input->mouse_x = mouse_position.x - client_rect_left_top.x;
-		new_playground_input->mouse_y = mouse_position.y - client_rect_left_top.y;
-
-		new_playground_input->mouse_x = global_display_buffer.width * new_playground_input->mouse_x / global_display_buffer.destination_width;
-		new_playground_input->mouse_y = global_display_buffer.height * new_playground_input->mouse_y / global_display_buffer.destination_height;
+		information.new_playground_input->mouse_x = global_display_buffer.width * information.new_playground_input->mouse_x / global_display_buffer.destination_width;
+		information.new_playground_input->mouse_y = global_display_buffer.height * information.new_playground_input->mouse_y / global_display_buffer.destination_height;
 
 		// char mouse_buffer[256];
 		// _snprintf_s(mouse_buffer, sizeof(mouse_buffer), "(%d, %d)\n",
-		// 			new_playground_input->mouse_x,
-		// 			new_playground_input->mouse_y);
+		// 			information.new_playground_input->mouse_x,
+		// 			information.new_playground_input->mouse_y);
 
 		// OutputDebugStringA(mouse_buffer);
 
@@ -856,15 +835,15 @@ int WINAPI WinMain(HINSTANCE instance,
 		playground_display_buffer.size = global_display_buffer.size;
 
 		if (state->input_record) {
-			Win32InputRecord(state, new_playground_input);
+			Win32InputRecord(state, information.new_playground_input);
 		}
 
 		if (state->input_playback) {
-			Win32InputPlayback(state, new_playground_input);
+			Win32InputPlayback(state, information.new_playground_input);
 		}
 
 		if (playground_code.is_valid) {
-			playground_code.update_and_render(&playground_memory, &playground_display_buffer, new_playground_input);
+			playground_code.update_and_render(&playground_memory, &playground_display_buffer, information.new_playground_input);
 		}
 
 		HDC device_context = GetDC(window_handle);
@@ -873,10 +852,7 @@ int WINAPI WinMain(HINSTANCE instance,
 									   window_size.width, window_size.height);
 		ReleaseDC(window_handle, device_context);
 
-		SWAP(old_playground_input, new_playground_input, PlaygroundInput*);
-		// PlaygroundInput* temp = new_playground_input;
-		// new_playground_input = old_playground_input;
-		// old_playground_input = temp;
+		SWAP(information.old_playground_input, information.new_playground_input, PlaygroundInput*);
 
 		Win32TimerEndFrame(&timer, target_seconds_per_frame);
 
