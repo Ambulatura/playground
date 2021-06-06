@@ -21,18 +21,25 @@ struct TileMapPosition
 	i32 tile_map_relative_tile_y;
 };
 
+struct EntityBlock
+{
+	u32 entity_index_count;
+	u32 entity_indices[64];
+	EntityBlock* next_entity_block;
+};
+
 struct TileMap
 {
-	u32 tile_map_index;
-	u32 entity_index_count;
-	u32 entity_indices[100];
-	u32* tiles;
+	i32 tile_map_index;
+	EntityBlock* first_entity_block;
 };
 
 #include "playground_entity.h"
 
 struct World
 {
+	PlaygroundMemoryArena* world_arena;
+	
 	TilePosition camera;
 	TilePosition desired_camera;
 	
@@ -49,13 +56,15 @@ struct World
 	i32 tile_count_x;
 	u32 tile_map_count_x;
 	u32 tile_map_count_y;
-	TileMap* tile_maps;
+	TileMap tile_maps[128];
 
 	u32 active_entity_count;
 	u32 active_entity_indices[1024];
 
 	u32 entity_count;
 	Entity entities[4096];
+
+	EntityBlock* first_free_entity_block;
 };
 
 #endif

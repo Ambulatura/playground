@@ -14,8 +14,8 @@ internal void InitializeArena(PlaygroundMemoryArena* arena, u32 size, void* base
 	arena->used = 0;
 }
 
-#define PushStruct(arena, type) (type*)PushSize_(arena, sizeof(type))
-#define PushArray(arena, count, type) (type*)PushSize_(arena, (count) * sizeof(type))
+#define PushStruct(arena, type) (type*)PushSize_((arena), sizeof(type))
+#define PushArray(arena, count, type) (type*)PushSize_((arena), (count) * sizeof(type))
 
 internal void* PushSize_(PlaygroundMemoryArena* arena, u32 size)
 {

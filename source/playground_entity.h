@@ -15,6 +15,8 @@ enum EntityFlag
 	COLLIDES_FLAG = (1 << 1),
 	NONSPATIAL_FLAG = (1 << 2),
 	MOVEABLE_FLAG = (1 << 3),
+	
+	JUMPING_FLAG = (1 << 4),
 };
 
 struct Entity

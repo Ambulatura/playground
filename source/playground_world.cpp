@@ -58,22 +58,37 @@ inline b32 IsTilePositionInvalid(TilePosition* tile_position)
 	return result;
 }
 
-inline u32 GetTileMapIndex(World* world, u32 tile_x)
+inline u32 GetTileMapIndex(World* world, i32 tile_x)
 {
-	u32 result = tile_x / world->tile_count_x;
+	i32 result = tile_x / world->tile_count_x;
 
 	return result;
 }
 
-inline TileMap* GetTileMap(World* world, u32 tile_x)
+inline TileMap* GetTileMap(World* world, i32 tile_map_index)
 {
-	u32 tile_map_index = GetTileMapIndex(world, tile_x);
+	// NOTE(SSJSR): We don't need to use hash function(sparse storage)
+	// because world map is small(128 tile_map long now, probably will be less?)
+	// and fixed size.
+	// NOTE(SSJSR): This operation is for mapping negative tile_map_index
+	// between 0 - ARRAY_COUNT(world->tile_maps).
+	// TODO(SSJSR): This mapping is very likely to be buggy.
+	u32 index = (tile_map_index & (ARRAY_COUNT(world->tile_maps) - 1));
+	ASSERT(index < ARRAY_COUNT(world->tile_maps));
+	TileMap* tile_map = world->tile_maps + index;
+	
+	return tile_map;
+}
 
-	ASSERT(tile_map_index < world->tile_map_count_x);
-
-	TileMap* result = world->tile_maps + tile_map_index;
-
-	return result;
+internal void InitializeWorld(World* world, u32 display_width, u32 display_height)
+{
+	world->tile_side_in_pixels = 30.0f;
+	world->tile_side_in_meters = 1.0f;
+	world->meters_to_pixels = world->tile_side_in_pixels / world->tile_side_in_meters;
+	world->tile_count_y = (display_height / (u32)world->tile_side_in_pixels);
+	world->tile_count_x = (display_width / (u32)world->tile_side_in_pixels);
+	world->tile_map_count_x = 30;
+	world->tile_map_count_y = 1;
 }
 
 inline b32 AreOnSameTileMap(World* world, TilePosition* tile_position_a, TilePosition* tile_position_b)

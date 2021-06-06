@@ -141,53 +141,42 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 		AddEntity(world, EntityType::NULL_TYPE, 0);
 
 		playground_state->screen_center = v2((f32)(display_buffer->width / 2), (f32)(display_buffer->height / 2));
-		world->tile_side_in_pixels = 30.0f;
-		world->tile_side_in_meters = 1.0f;
-		world->meters_to_pixels = world->tile_side_in_pixels / world->tile_side_in_meters;
-		world->tile_count_y = (display_buffer->height / (u32)world->tile_side_in_pixels) + 1;
-		world->tile_count_x = (display_buffer->width / (u32)world->tile_side_in_pixels) + 1;
+
+		InitializeWorld(world, display_buffer->width, display_buffer->height);
 
 		InitializeArena(&playground_state->arena,
 						memory->permanent_storage_size - sizeof(*playground_state),
 						(u8*)memory->permanent_storage + sizeof(*playground_state));
 
-		world->tile_map_count_x = 10;
-		world->tile_map_count_y = 1;
-		world->tile_maps =
-			PushArray(&playground_state->arena, world->tile_map_count_x * world->tile_map_count_y, TileMap);
+		world->world_arena = &playground_state->arena;
 
-		for (u32 tile_map_y = 0;
-			 tile_map_y < world->tile_map_count_y;
+		for (i32 tile_map_y = 0;
+			 tile_map_y < (i32)world->tile_map_count_y;
 			 ++tile_map_y) {
-			for (u32 tile_map_x = 0;
-				 tile_map_x < world->tile_map_count_x;
+			for (i32 tile_map_x = 0;
+				 tile_map_x < (i32)world->tile_map_count_x;
 				 ++tile_map_x) {
-
-				world->tile_maps[tile_map_y * world->tile_map_count_x + tile_map_x].tiles =
-					PushArray(&playground_state->arena,
-							  world->tile_count_y * world->tile_count_x,
-							  u32);
-
-				world->tile_maps[tile_map_y * world->tile_map_count_x + tile_map_x].tile_map_index = tile_map_x;
 
 				for (i32 y = 0; y < world->tile_count_y; ++y) {
 					for (i32 x = 0; x < world->tile_count_x; ++x) {
 						i32 tile_x = tile_map_x * world->tile_count_x + x;
 						i32 tile_y = tile_map_y * world->tile_count_y + y;
 
-						if (y == 0) {
-							AddWall(world, tile_x, tile_y);
+						if (x == 0 && tile_map_x == 0) {
+							AddWall(world, tile_x, tile_y,world->tile_side_in_meters, world->tile_side_in_meters);
+						}
+						else if (y == 0) {
+							AddWall(world, tile_x, tile_y, world->tile_side_in_meters, world->tile_side_in_meters);
 						}
 						else if ((x == 0 || x == world->tile_count_x - 1) &&
 								 y != 0 &&
 								 y != 1 &&
 								 y != 2) {
-							AddWall(world, tile_x, tile_y);
+							AddWall(world, tile_x, tile_y, world->tile_side_in_meters, world->tile_side_in_meters);
 						}
-						// if (tile_x == world->tile_count_x - 1 &&
-						// 		 tile_y == 16) {
-						// 	AddWall(world, tile_x, tile_y);
-						// }
+						else if (y == world->tile_count_y - 1) {
+							AddWall(world, tile_x, tile_y, world->tile_side_in_meters, world->tile_side_in_meters);
+						}
 					}
 				}
 			}
@@ -199,11 +188,11 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 		playground_state->background = LoadBmp("background_day_scaled.bmp", memory->PlaygroundReadFile, 0, 0);
 
-		playground_state->fireball_00 = LoadBmp("fireball/FB001.bmp", memory->PlaygroundReadFile, 44, 22);
-		playground_state->fireball_01 = LoadBmp("fireball/FB002.bmp", memory->PlaygroundReadFile, 44, 22);
-		playground_state->fireball_02 = LoadBmp("fireball/FB003.bmp", memory->PlaygroundReadFile, 44, 22);
-		playground_state->fireball_03 = LoadBmp("fireball/FB004.bmp", memory->PlaygroundReadFile, 44, 22);
-		playground_state->fireball_04 = LoadBmp("fireball/FB005.bmp", memory->PlaygroundReadFile, 44, 22);
+		playground_state->fireball_00 = LoadBmp("fireball/FB001.bmp", memory->PlaygroundReadFile, 44, 15);
+		playground_state->fireball_01 = LoadBmp("fireball/FB002.bmp", memory->PlaygroundReadFile, 44, 15);
+		playground_state->fireball_02 = LoadBmp("fireball/FB003.bmp", memory->PlaygroundReadFile, 44, 15);
+		playground_state->fireball_03 = LoadBmp("fireball/FB004.bmp", memory->PlaygroundReadFile, 44, 15);
+		playground_state->fireball_04 = LoadBmp("fireball/FB005.bmp", memory->PlaygroundReadFile, 44, 15);
 
 		AddFireballBitmap(playground_state, &playground_state->fireball_00, FireballStateType::CASTING_FIREBALL_STATE_TYPE);
 		AddFireballBitmap(playground_state, &playground_state->fireball_01, FireballStateType::CASTING_FIREBALL_STATE_TYPE);
@@ -213,10 +202,10 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 		// NOTE(SSJSR): Idle state.
 
-		playground_state->player_idle_00 = LoadBmp("adventurer/idle/adventurer-idle-2-00.bmp", memory->PlaygroundReadFile, 25, 35);
-		playground_state->player_idle_01 = LoadBmp("adventurer/idle/adventurer-idle-2-01.bmp", memory->PlaygroundReadFile, 25, 35);
-		playground_state->player_idle_02 = LoadBmp("adventurer/idle/adventurer-idle-2-02.bmp", memory->PlaygroundReadFile, 25, 35);
-		playground_state->player_idle_03 = LoadBmp("adventurer/idle/adventurer-idle-2-03.bmp", memory->PlaygroundReadFile, 25, 35);
+		playground_state->player_idle_00 = LoadBmp("adventurer/idle/adventurer-idle-2-00.bmp", memory->PlaygroundReadFile, 25, 22);
+		playground_state->player_idle_01 = LoadBmp("adventurer/idle/adventurer-idle-2-01.bmp", memory->PlaygroundReadFile, 25, 22);
+		playground_state->player_idle_02 = LoadBmp("adventurer/idle/adventurer-idle-2-02.bmp", memory->PlaygroundReadFile, 25, 22);
+		playground_state->player_idle_03 = LoadBmp("adventurer/idle/adventurer-idle-2-03.bmp", memory->PlaygroundReadFile, 25, 22);
 
 		AddPlayerBitmap(playground_state, &playground_state->player_idle_00, PlayerStateType::IDLE_STATE_TYPE);
 		AddPlayerBitmap(playground_state, &playground_state->player_idle_01, PlayerStateType::IDLE_STATE_TYPE);
@@ -225,12 +214,12 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 		// NOTE(SSJSR): Run state.
 
-		playground_state->player_run_00 = LoadBmp("adventurer/run/adventurer-run3-00.bmp", memory->PlaygroundReadFile, 25, 35);
-		playground_state->player_run_01 = LoadBmp("adventurer/run/adventurer-run3-01.bmp", memory->PlaygroundReadFile, 25, 35);
-		playground_state->player_run_02 = LoadBmp("adventurer/run/adventurer-run3-02.bmp", memory->PlaygroundReadFile, 25, 35);
-		playground_state->player_run_03 = LoadBmp("adventurer/run/adventurer-run3-03.bmp", memory->PlaygroundReadFile, 25, 35);
-		playground_state->player_run_04 = LoadBmp("adventurer/run/adventurer-run3-04.bmp", memory->PlaygroundReadFile, 25, 35);
-		playground_state->player_run_05 = LoadBmp("adventurer/run/adventurer-run3-05.bmp", memory->PlaygroundReadFile, 25, 35);
+		playground_state->player_run_00 = LoadBmp("adventurer/run/adventurer-run3-00.bmp", memory->PlaygroundReadFile, 25, 22);
+		playground_state->player_run_01 = LoadBmp("adventurer/run/adventurer-run3-01.bmp", memory->PlaygroundReadFile, 25, 22);
+		playground_state->player_run_02 = LoadBmp("adventurer/run/adventurer-run3-02.bmp", memory->PlaygroundReadFile, 25, 22);
+		playground_state->player_run_03 = LoadBmp("adventurer/run/adventurer-run3-03.bmp", memory->PlaygroundReadFile, 25, 22);
+		playground_state->player_run_04 = LoadBmp("adventurer/run/adventurer-run3-04.bmp", memory->PlaygroundReadFile, 25, 22);
+		playground_state->player_run_05 = LoadBmp("adventurer/run/adventurer-run3-05.bmp", memory->PlaygroundReadFile, 25, 22);
 
 		AddPlayerBitmap(playground_state, &playground_state->player_run_00, PlayerStateType::RUN_STATE_TYPE);
 		AddPlayerBitmap(playground_state, &playground_state->player_run_01, PlayerStateType::RUN_STATE_TYPE);
@@ -241,10 +230,10 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 		// NOTE(SSJSR): Jump state.
 
-		playground_state->player_jump_00 = LoadBmp("adventurer/jump/adventurer-jump-00.bmp", memory->PlaygroundReadFile, 25, 35);
-		playground_state->player_jump_01 = LoadBmp("adventurer/jump/adventurer-jump-01.bmp", memory->PlaygroundReadFile, 25, 35);
-		playground_state->player_jump_02 = LoadBmp("adventurer/jump/adventurer-jump-02.bmp", memory->PlaygroundReadFile, 25, 35);
-		playground_state->player_jump_03 = LoadBmp("adventurer/jump/adventurer-jump-03.bmp", memory->PlaygroundReadFile, 25, 35);
+		playground_state->player_jump_00 = LoadBmp("adventurer/jump/adventurer-jump-00.bmp", memory->PlaygroundReadFile, 25, 22);
+		playground_state->player_jump_01 = LoadBmp("adventurer/jump/adventurer-jump-01.bmp", memory->PlaygroundReadFile, 25, 22);
+		playground_state->player_jump_02 = LoadBmp("adventurer/jump/adventurer-jump-02.bmp", memory->PlaygroundReadFile, 25, 22);
+		playground_state->player_jump_03 = LoadBmp("adventurer/jump/adventurer-jump-03.bmp", memory->PlaygroundReadFile, 25, 22);
 
 		AddPlayerBitmap(playground_state, &playground_state->player_jump_00, PlayerStateType::JUMP_STATE_TYPE);
 		AddPlayerBitmap(playground_state, &playground_state->player_jump_01, PlayerStateType::JUMP_STATE_TYPE);
@@ -253,10 +242,10 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 		// NOTE(SSJSR): Cast state.
 
-		playground_state->player_cast_00 = LoadBmp("adventurer/cast/adventurer-cast-00.bmp", memory->PlaygroundReadFile, 25, 35);
-		playground_state->player_cast_01 = LoadBmp("adventurer/cast/adventurer-cast-01.bmp", memory->PlaygroundReadFile, 25, 35);
-		playground_state->player_cast_02 = LoadBmp("adventurer/cast/adventurer-cast-02.bmp", memory->PlaygroundReadFile, 25, 35);
-		playground_state->player_cast_03 = LoadBmp("adventurer/cast/adventurer-cast-03.bmp", memory->PlaygroundReadFile, 25, 35);
+		playground_state->player_cast_00 = LoadBmp("adventurer/cast/adventurer-cast-00.bmp", memory->PlaygroundReadFile, 25, 22);
+		playground_state->player_cast_01 = LoadBmp("adventurer/cast/adventurer-cast-01.bmp", memory->PlaygroundReadFile, 25, 22);
+		playground_state->player_cast_02 = LoadBmp("adventurer/cast/adventurer-cast-02.bmp", memory->PlaygroundReadFile, 25, 22);
+		playground_state->player_cast_03 = LoadBmp("adventurer/cast/adventurer-cast-03.bmp", memory->PlaygroundReadFile, 25, 22);
 
 		AddPlayerBitmap(playground_state, &playground_state->player_cast_00, PlayerStateType::CAST_STATE_TYPE);
 		AddPlayerBitmap(playground_state, &playground_state->player_cast_01, PlayerStateType::CAST_STATE_TYPE);
@@ -266,7 +255,8 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 		AddPlayerBitmap(playground_state, 0, PlayerStateType::MAX_STATE_TYPE);
 		AddFireballBitmap(playground_state, 0, FireballStateType::MAX_FIREBALL_STATE_TYPE);
 
-		AddWall(world, 7, 7);
+		AddWall(world, 3, 3, 2.0f, 13.0f);
+		AddWall(world, 10, 2, 13.0f, 2.0f);
 
 		AddMonster(world, world->tile_count_x - 7, 10);
 
@@ -291,10 +281,11 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 	player_entity->direction = v2(0.0f, -1.0f);
 
-	if (input->move_up.is_down) {
+	if (input->move_up.is_down && !IsFlagSet(player_entity, EntityFlag::JUMPING_FLAG)) {
 		player_entity->direction.y = 1.0f;
-		player_entity->velocity.y = 5.0f;
+		player_entity->velocity.y = 20.0f;
 		playground_state->player_bitmap_state.current_state = PlayerStateType::JUMP_STATE_TYPE;
+		AddFlags(player_entity, EntityFlag::JUMPING_FLAG);
 
 	}
 	if (input->move_down.is_down) {
@@ -327,7 +318,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 			world->meters_to_pixels -= 1.0f;
 		}
 	}
-	
+
 	if (input->mouse_middle.is_down) {
 		world->meters_to_pixels = world->tile_side_in_pixels / world->tile_side_in_meters;
 	}
@@ -336,7 +327,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 	DrawBitmap(display_buffer, &playground_state->background,
 			   0, 0);
-	
+
 	// for (u32 entity_index = 1;
 	// 	 entity_index < world->entity_count;
 	// 	 ++entity_index) {
@@ -353,13 +344,13 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 			f32 entity_ground_point_y = playground_state->screen_center.y - world->meters_to_pixels * entity->position.y;
 
 			v2 entity_min = v2(entity_ground_point_x - (0.5f * world->meters_to_pixels * entity->width),
-							   entity_ground_point_y - (world->meters_to_pixels * entity->height));
+							   entity_ground_point_y - (0.5f * world->meters_to_pixels * entity->height));
 			v2 entity_max = v2(entity_min.x + entity->width * world->meters_to_pixels,
 							   entity_min.y + entity->height * world->meters_to_pixels);
 
 			if (entity->type == EntityType::PLAYER_TYPE) {
 				move_feature.direction = entity->direction;
-				move_feature.acceleration = v2(50.0f, 50.0f);
+				move_feature.acceleration = v2(50.0f, 70.0f);
 				move_feature.friction_coefficient = 8.0;
 				move_feature.max_unit_vector_length = true;
 
@@ -376,17 +367,17 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 					MakeEntitySpatialAndAddToTileMap(world, ball_entity, entity->ball_index,
 													 v2(direction_x, 0.0f),
 													 v2(entity->position.x + 1.0f * direction_x,
-														entity->position.y + entity->height * 0.4f),
-													 v2(10.0f * direction_x, 0.0f));
+														entity->position.y + entity->height * 0.14f),
+													 v2(15.0f * direction_x, 0.0f));
 				}
 
-				// DrawRectangleWithBorder(display_buffer,
-				// 						entity_min.x, entity_min.y,
-				// 						entity_max.x, entity_max.y,
-				// 						1.0f, 0.4f, 0.2f,
-				// 						5,
-				// 						0.7f, 0.3f, 0.5f,
-				// 						true);
+				DrawRectangleWithBorder(display_buffer,
+										entity_min.x, entity_min.y,
+										entity_max.x, entity_max.y,
+										1.0f, 0.4f, 0.2f,
+										5,
+										0.7f, 0.3f, 0.5f,
+										true);
 
 				b32 flip_horizontally = false;
 				if (entity->facing_direction == 1) {
@@ -401,8 +392,10 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 			}
 			else if (entity->type == EntityType::BALL_TYPE) {
 				// move_feature.direction = entity->direction;
-				move_feature.acceleration = v2(60.0f, 0.0f);
+				move_feature.acceleration = v2();
 				move_feature.friction_coefficient = 0.0f;
+				move_feature.max_unit_vector_length = false;
+
 				playground_state->fireball_bitmap_state.current_state = FireballStateType::CASTING_FIREBALL_STATE_TYPE;
 				LoadedBmp* fireball = GetFireballBitmap(playground_state);
 
@@ -414,35 +407,39 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				if (entity->distance_limit == 0.0f) {
 					MakeEntityNonspatialAndDeleteFromTileMap(world, entity, entity_index);
 				}
-					
+
 				DrawBitmap(display_buffer, fireball,
 						   entity_ground_point_x, entity_ground_point_y,
 						   fireball->align_x,
 						   fireball->align_y,
 						   flip_horizontally);
 
-				// DrawRectangleWithBorder(display_buffer,
-				// 						entity_min.x, entity_min.y,
-				// 						entity_max.x, entity_max.y,
-				// 						1.0f, 0.4f, 0.2f,
-				// 						5,
-				// 						0.7f, 0.3f, 0.5f,
-				// 						true);
+				// DrawRectangle(display_buffer,
+				// 			  entity_min.x, entity_min.y,
+				// 			  entity_max.x, entity_max.y,
+				// 			  0.0f, 0.0f, 0.0f);
 			}
 			else if (entity->type == EntityType::MONSTER_TYPE) {
 				// UpdateMonster(world, entity_index, input->delta_time_for_frame);
 				// entity->direction = v2(1.0f, -1.0f);
-				
+
 				if (entity->distance_limit == 0.0f) {
-					entity->distance_limit = 20.0f;
-					entity->direction.x *= -1.0f;
+					if (!IsFlagSet(entity, EntityFlag::MOVEABLE_FLAG)) {
+						AddFlags(entity, EntityFlag::MOVEABLE_FLAG);
+						entity->distance_limit = 20.0f;
+						entity->direction = v2(1.0f, -1.0f);
+					}
+					else {
+						entity->distance_limit = 20.0f;
+						entity->direction.x *= -1.0f;
+					}
 				}
 
 				move_feature.direction = entity->direction;
 				move_feature.acceleration = v2(30.0f, 100.0f);
 				move_feature.friction_coefficient = 8.0f;
 				move_feature.max_unit_vector_length = true;
-				
+
 				DrawRectangleWithBorder(display_buffer,
 										entity_min.x, entity_min.y,
 										entity_max.x, entity_max.y,
@@ -452,12 +449,21 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 										true);
 			}
 			else {
+				// DrawRectangleWithBorder(display_buffer,
+				// 						entity_min.x, entity_min.y,
+				// 						entity_max.x, entity_max.y,
+				// 						0.18f, 0.60f, 0.25f,
+				// 						1,
+				// 						0.15f, 0.15f, 0.15f);
 				DrawRectangleWithBorder(display_buffer,
 										entity_min.x, entity_min.y,
 										entity_max.x, entity_max.y,
-										0.18f, 0.60f, 0.25f,
+										0.18f, 0.18f, 0.18f,
 										1,
-										0.15f, 0.15f, 0.15f);
+										// 0.61f, 0.98f, 0.98f
+										// 0.0f, 0.7f, 0.15f
+										1.0f, 1.0f, 0.45f);
+				
 			}
 
 			if (IsFlagSet(entity, EntityFlag::MOVEABLE_FLAG)) {
@@ -468,7 +474,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				IsFlagSet(entity, EntityFlag::NONSPATIAL_FLAG) ?
 				InvalidTilePosition() :
 				MapIntoTilePosition(world->camera, entity->position, world->tile_side_in_meters);
-				
+
 			UpdateEntityTileMapAndTilePosition(world, entity, entity_index, &new_tile_position);
 		}
 	}
@@ -529,4 +535,22 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 	world->camera = new_camera;
 
+
+	// for (i32 y = 0; y < world->tile_count_y; ++y) {
+	// 	for (i32 x = 0; x < world->tile_count_x; ++x) {
+	// 		f32 min_x = (f32)(-15 +
+	// 						  x * 30);
+	// 		f32 max_x = min_x + 30.0f;
+	// 		f32 min_y = (f32)(-15
+	// 						  + y * 30);
+	// 		f32 max_y = min_y + 30.0f;
+	// 		DrawRectangleWithBorder(display_buffer,
+	// 								min_x, min_y,
+	// 								max_x, max_y,
+	// 								1.0f, 0.4f, 0.2f,
+	// 								1,
+	// 								0.0f, 0.0f, 0.0f,
+	// 								true);
+	// 	}
+	// }
 }
