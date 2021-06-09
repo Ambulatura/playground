@@ -65,5 +65,12 @@ inline f32 SquareRoot(f32 value)
 	return result;
 }
 
+inline f32 AbsoluteOf(f32 value)
+{
+	f32 result = fabsf(value);
+
+	return result;
+}
+
 #define PLAYGROUND_INTRINSICS_H
 #endif

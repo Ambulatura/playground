@@ -11,6 +11,56 @@ union v2
 	};
 };
 
+inline f32 Square(f32 value)
+{
+	f32 result = value * value;
+	
+	return result;
+}
+
+inline f32 SafeDivideN(f32 numerator, f32 divisor, f32 value)
+{
+	f32 result = value;
+
+	if (divisor != 0.0f) {
+		result = numerator / divisor;
+	}
+
+	return result;
+}
+
+inline f32 SafeDivide0(f32 numerator, f32 divisor)
+{
+	f32 result = SafeDivideN(numerator, divisor, 0.0f);
+	
+	return result;
+}
+
+inline f32 SafeDivide1(f32 numerator, f32 divisor)
+{
+	f32 result = SafeDivideN(numerator, divisor, 1.0f);
+	
+	return result;
+}
+
+inline u32 SafeModU32N(u32 numerator, u32 divisor, u32 value)
+{
+	u32 result = value;
+
+	if (divisor != 0) {
+		result = numerator % divisor;
+	}
+
+	return result;
+}
+
+inline u32 SafeModU320(u32 numerator, u32 divisor)
+{
+	u32 result = SafeModU32N(numerator, divisor, 0);
+	
+	return result;
+}
+
 inline v2 operator-(v2 v)
 {
 	v2 result;
@@ -151,6 +201,24 @@ inline b32 IsInRectangle2(Rectangle2 rect2, v2 point)
 				  (rect2.min.y <= point.y) &&
 				  (rect2.max.x > point.x) &&
 				  (rect2.max.y > point.y));
+
+	return result;
+}
+
+inline Rectangle2 AddDimensionTo(Rectangle2 rect2, v2 dimension)
+{
+	Rectangle2 result;
+	result.min = rect2.min - dimension * 0.5f;
+	result.max = rect2.max + dimension * 0.5f;
+
+	return result;
+}
+
+inline Rectangle2 SubtractDimensionTo(Rectangle2 rect2, v2 dimension)
+{
+	Rectangle2 result;
+	result.min = rect2.min + dimension * 0.5f;
+	result.max = rect2.max - dimension * 0.5f;
 
 	return result;
 }

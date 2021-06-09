@@ -30,7 +30,7 @@ struct EntityBlock
 
 struct TileMap
 {
-	i32 tile_map_index;
+	// i32 tile_map_index;
 	EntityBlock* first_entity_block;
 };
 
@@ -62,7 +62,7 @@ struct World
 	u32 active_entity_indices[1024];
 
 	u32 entity_count;
-	Entity entities[4096];
+	Entity entities[4096 * 4];
 
 	EntityBlock* first_free_entity_block;
 };

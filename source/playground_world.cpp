@@ -82,7 +82,7 @@ inline TileMap* GetTileMap(World* world, i32 tile_map_index)
 
 internal void InitializeWorld(World* world, u32 display_width, u32 display_height)
 {
-	world->tile_side_in_pixels = 30.0f;
+	world->tile_side_in_pixels = 60.0f;
 	world->tile_side_in_meters = 1.0f;
 	world->meters_to_pixels = world->tile_side_in_pixels / world->tile_side_in_meters;
 	world->tile_count_y = (display_height / (u32)world->tile_side_in_pixels);

@@ -49,19 +49,27 @@ inline void MakeEntitySpatialAndAddToTileMap(World* world, Entity* entity, u32 e
 
 }
 
-internal void SetCameraLocationAndUpdateEntities(World* world, TilePosition new_camera)
+internal void SetCameraLocationAndUpdateEntities(World* world, TilePosition new_camera, f32 delta_time)
 {
 	world->active_entity_count = 0;
 
+	f32 max_entity_dimension = (f32)world->tile_count_x + 
+		10.0f;
+	f32 max_entity_velocity = 30.0f;
+	f32 max_bound = max_entity_dimension + max_entity_velocity * delta_time;
 	u32 camera_span_x = world->tile_count_x * 3;
 	u32 camera_span_y = world->tile_count_y;
-	Rectangle2 camera_bounds =
+
+	Rectangle2 updatable_bounds =
 		Rectangle2CenterDimension(v2(0.0f, 0.0f),
 								  world->tile_side_in_meters *
 								  v2((f32)camera_span_x, (f32)camera_span_y));
+	Rectangle2 camera_bounds = AddDimensionTo(updatable_bounds,
+											  v2(max_bound, 0.0f));
+		
 
-	i32 lower_limit = (u32)(world->camera.tile_x - ((f32)camera_span_x * 0.5f));
-	i32 upper_limit = (u32)(world->camera.tile_x + ((f32)camera_span_x * 0.5f));
+	i32 lower_limit = (i32)(world->camera.tile_x - ((f32)camera_span_x * 0.5f));
+	i32 upper_limit = (i32)(world->camera.tile_x + ((f32)camera_span_x * 0.5f));
 	i32 min_tile_map_index = GetTileMapIndex(world, lower_limit);
 	i32 max_tile_map_index = GetTileMapIndex(world, upper_limit);
 
@@ -78,6 +86,7 @@ internal void SetCameraLocationAndUpdateEntities(World* world, TilePosition new_
 						if (IsInRectangle2(camera_bounds, new_position)) {
 							entity->position = new_position;
 							world->active_entity_indices[world->active_entity_count++] = entity_index;
+							entity->updatable = IsInRectangle2(updatable_bounds, new_position);
 						}
 					}
 				}
@@ -108,25 +117,24 @@ internal void UpdateEntityTileMapAndTilePosition(World* world, Entity* entity, u
 					 block && !entity_found;
 					 block = block->next_entity_block) {
 					for (u32 block_entity_index_index = 0;
-						 block_entity_index_index < block->entity_index_count && !entity_found;
+						 (block_entity_index_index < block->entity_index_count) && (!entity_found);
 						 ++block_entity_index_index) {
 						u32 block_entity_index = block->entity_indices[block_entity_index_index];
 						if (entity_index == block_entity_index) {
-							// TODO(SSJSR): We should test this if block.
-							if (first_entity_block->entity_index_count == 1) {
-								EntityBlock* removed_block = first_entity_block;
-								first_entity_block = first_entity_block->next_entity_block;
 
-								first_entity_block->next_entity_block = world->first_free_entity_block;
-								world->first_free_entity_block = first_entity_block;
-							}
-							
 							u32* last_entity_index = first_entity_block->entity_indices + (--first_entity_block->entity_index_count);
 							block->entity_indices[block_entity_index_index] = *last_entity_index;
 							*last_entity_index = 0;
 							
+							if (first_entity_block->entity_index_count == 0) {
+								EntityBlock* removed_block = first_entity_block;
+								old_tile_map->first_entity_block = first_entity_block->next_entity_block;
+
+								removed_block->next_entity_block = world->first_free_entity_block;
+								world->first_free_entity_block = removed_block;
+							}
+							
 							entity_found = true;
-							break;
 						}
 					}
 				}
@@ -144,6 +152,7 @@ internal void UpdateEntityTileMapAndTilePosition(World* world, Entity* entity, u
 					// TODO(SSJSR): We should test this if block.
 					if (world->first_free_entity_block) {
 						first_entity_block = world->first_free_entity_block;
+						first_entity_block->next_entity_block = 0;
 						world->first_free_entity_block = world->first_free_entity_block->next_entity_block;
 					}
 					else {
@@ -203,7 +212,8 @@ internal void MoveEntity(World* world, u32 entity_index, Entity* entity, f32 del
 	// player_acceleration.x *= player_direction.x;
 	// player_acceleration.y *= player_direction.y;
 
-	acceleration += move_feature->friction_coefficient * -entity->velocity;
+	// acceleration += move_feature->friction_coefficient * -entity->velocity;
+	acceleration.x += move_feature->friction_coefficient * -entity->velocity.x;
 
 	v2 entity_position_delta = (0.5f * acceleration * delta_time_for_frame * delta_time_for_frame) +
 		(entity->velocity * delta_time_for_frame);
@@ -261,11 +271,9 @@ internal void MoveEntity(World* world, u32 entity_index, Entity* entity, f32 del
 										 entity_position_delta.y,
 										 &time_minimum)) {
 								wall_normal = v2(-1.0f, 0.0f);
-								entity->velocity.y *= 0.4f;
+								entity->velocity.y *= 0.7f;
 								hit = true;
-								if (IsFlagSet(entity, EntityFlag::JUMPING_FLAG)) {
-									ClearFlags(entity, EntityFlag::JUMPING_FLAG);
-								}
+								AddFlags(entity, EntityFlag::ON_WALL_FLAG);
 							}
 
 							if (TestWall(wall_max_corner.x,
@@ -275,11 +283,9 @@ internal void MoveEntity(World* world, u32 entity_index, Entity* entity, f32 del
 										 entity_position_delta.y,
 										 &time_minimum)) {
 								wall_normal = v2(1.0f, 0.0f);
-								entity->velocity.y *= 0.4f;
+								entity->velocity.y *= 0.7f;
 								hit = true;
-								if (IsFlagSet(entity, EntityFlag::JUMPING_FLAG)) {
-									ClearFlags(entity, EntityFlag::JUMPING_FLAG);
-								}
+								AddFlags(entity, EntityFlag::ON_WALL_FLAG);
 							}
 
 							if (TestWall(wall_min_corner.y,
@@ -300,9 +306,7 @@ internal void MoveEntity(World* world, u32 entity_index, Entity* entity, f32 del
 										 &time_minimum)) {
 								wall_normal = v2(0.0f, 1.0f);
 								hit = true;
-								if (IsFlagSet(entity, EntityFlag::JUMPING_FLAG)) {
-									ClearFlags(entity, EntityFlag::JUMPING_FLAG);
-								}
+								AddFlags(entity, EntityFlag::ON_GROUND_FLAG);
 							}
 						}
 					}
@@ -336,11 +340,22 @@ internal void MoveEntity(World* world, u32 entity_index, Entity* entity, f32 del
 		MakeEntityNonspatialAndDeleteFromTileMap(world, entity, entity_index);
 	}
 
-	if (entity->velocity.x < 0.0f) {
+	// if (entity->velocity.x < 0.0f) {
+	// 	entity->facing_direction = 1; // Left
+	// }
+	// else if (entity->velocity.x > 0.0f) {
+	// 	entity->facing_direction = 2; // Right
+	// }
+
+	if (entity->direction.x < 0.0f) {
 		entity->facing_direction = 1; // Left
 	}
-	else if (entity->velocity.x > 0.0f) {
+	else if (entity->direction.x > 0.0f) {
 		entity->facing_direction = 2; // Right
+	}
+
+	if (entity->direction.y < 0 && entity->velocity.y < 0.0f) {
+		AddFlags(entity, EntityFlag::FALL_FLAG);
 	}
 }
 
@@ -415,7 +430,7 @@ internal u32 AddBall(World* world)
 internal u32 AddPlayer(World* world)
 {
 	TilePosition tile_position = {};
-	tile_position.tile_x = 5;
+	tile_position.tile_x = 6;
 	tile_position.tile_y = 5;
 	f32 width = 0.6f;
 	f32 height = 0.9f;
@@ -458,4 +473,114 @@ internal u32 AddMonster(World* world, i32 tile_x, i32 tile_y)
 	AddFlags(entity, EntityFlag::COLLIDES_FLAG);
 
 	return entity_index;
+}
+
+internal Animation* EntityStateControl(PlaygroundState* playground_state,
+								 Entity* entity,
+								 PlaygroundInput* input=0)
+{
+
+	Animation* entity_animation = 0;
+	b32 lock_animation_last_frame = false;
+	
+	if (entity->type == EntityType::PLAYER_TYPE) {
+		u32 animation_index = 0;
+
+		ASSERT(input);
+
+		if (IsFlagSet(entity, EntityFlag::ON_GROUND_FLAG)) {
+			ClearFlags(entity,
+					   EntityFlag::RUN_FLAG |
+					   EntityFlag::JUMP_FLAG |
+					   EntityFlag::DOUBLE_JUMP_FLAG |
+					   EntityFlag::FALL_FLAG |
+					   EntityFlag::ON_WALL_FLAG);
+
+		}
+		if (IsFlagSet(entity, EntityFlag::ON_WALL_FLAG)) {
+			animation_index = 5;
+			ClearFlags(entity,
+					   EntityFlag::RUN_FLAG |
+					   EntityFlag::JUMP_FLAG |
+					   EntityFlag::DOUBLE_JUMP_FLAG |
+					   EntityFlag::FALL_FLAG |
+					   EntityFlag::ON_GROUND_FLAG);
+		}
+		if (IsFlagSet(entity, EntityFlag::JUMP_FLAG)) {
+			animation_index = 2;
+		}
+		if (IsFlagSet(entity, EntityFlag::DOUBLE_JUMP_FLAG)) {
+			animation_index = 3;
+		}
+
+		if (IsFlagSet(entity, EntityFlag::FALL_FLAG)) {
+			animation_index = 4;
+		}
+
+		entity->direction = v2(0.0f, -1.0f);
+		
+		f32 duration = 0.2f;// input->delta_time_for_frame == 0.0f ? 0.2f : input->delta_time_for_frame * 12;
+		f32 jump_height = 1.5f;
+		f32 jump_speed = (2.0f * jump_height) / duration;
+		f32 gravity = (2.0f * jump_height) / Square(duration);
+		entity->acceleration.y = gravity;
+		
+		if (input->move_up.is_down) {
+			if (IsFlagSet(entity, EntityFlag::ON_GROUND_FLAG)) {
+				entity->direction.y = 1.0f;
+				entity->velocity.y = jump_speed;
+				
+				AddFlags(entity, EntityFlag::JUMP_FLAG);
+				ClearFlags(entity, EntityFlag::ON_GROUND_FLAG);
+				animation_index = 2;
+			}
+			else if ((IsFlagSet(entity, EntityFlag::ON_WALL_FLAG) ||
+					  IsFlagSet(entity, EntityFlag::FALL_FLAG)) &&
+					 !IsFlagSet(entity, EntityFlag::DOUBLE_JUMP_FLAG)) {
+				entity->direction.y = 1.0f;
+				entity->velocity.y = jump_speed;
+				
+				AddFlags(entity, EntityFlag::DOUBLE_JUMP_FLAG);
+				ClearFlags(entity,
+						   EntityFlag::JUMP_FLAG | EntityFlag::FALL_FLAG);
+				animation_index = 3;
+			}
+		}
+		if (input->move_down.is_down) {
+			entity->direction.y = -1.0f;
+		}
+		if (input->move_left.is_down) {
+			entity->direction.x = -1.0f;
+			if (IsFlagSet(entity, EntityFlag::ON_GROUND_FLAG)) {
+				AddFlags(entity, EntityFlag::RUN_FLAG);
+				animation_index = 1;
+			}
+		}
+		if (input->move_right.is_down) {
+			entity->direction.x = 1.0f;
+
+			if (IsFlagSet(entity, EntityFlag::ON_GROUND_FLAG)) {
+				AddFlags(entity, EntityFlag::RUN_FLAG);
+				animation_index = 1;
+			}
+		}
+
+		ClearFlags(entity,
+				   EntityFlag::ON_WALL_FLAG |
+				   EntityFlag::ON_GROUND_FLAG |
+				   EntityFlag::FALL_FLAG);
+		
+		entity_animation = entity->animations + animation_index;
+		f32 seconds_per_frame = entity_animation->duration / (f32)entity_animation->frame_count;
+		entity_animation->total_elapsed_time += input->delta_time_for_frame;
+
+		entity_animation->frame_index = (u32)(entity_animation->total_elapsed_time / seconds_per_frame);
+	
+		if (entity_animation->total_elapsed_time > entity_animation->duration) {
+			entity_animation->total_elapsed_time = 0.0;
+			entity_animation->frame_index = 0;
+		}
+	}
+
+	return entity_animation;
 }

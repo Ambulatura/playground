@@ -167,7 +167,7 @@ internal void Win32ShowDisplayBufferInWindow(HDC device_context, Win32DisplayBuf
 		}
 
 		StretchDIBits(device_context,
-					  0, 0, display_buffer->destination_width, display_buffer->destination_height,
+					  0, 0, window_width, window_height,// display_buffer->destination_width, display_buffer->destination_height,
 					  0, 0, display_buffer->width, display_buffer->height,
 					  display_buffer->memory,
 					  &display_buffer->bitmap_info,
@@ -653,7 +653,7 @@ int WINAPI WinMain(HINSTANCE instance,
 	Win32Timer timer;
 	Win32TimerInitialize(&timer);
 
-	Win32ResizeDisplayBuffer(&global_display_buffer, 960, 540);
+	Win32ResizeDisplayBuffer(&global_display_buffer, 1920, 1080);
 
 	Win32MessageLoopInformation information = {};
 	Win32State* state = &information.state;
@@ -714,7 +714,7 @@ int WINAPI WinMain(HINSTANCE instance,
 	if (refresh_rate > 1) {
 		monitor_refresh_hz = refresh_rate;
 	}
-	f32 game_update_hz = (f32)monitor_refresh_hz / 2.0f;
+	f32 game_update_hz = (f32)monitor_refresh_hz; // / 2.0f
 	f32 target_seconds_per_frame = 1.0f / game_update_hz;
 
 	PlaygroundMemory playground_memory = {};
@@ -722,7 +722,7 @@ int WINAPI WinMain(HINSTANCE instance,
 	playground_memory.PlaygroundReadFile = Win32ReadFile;
 	playground_memory.PlaygroundFreeFile = Win32FreeFile;
 
-	playground_memory.permanent_storage_size = MEGABYTES(64);
+	playground_memory.permanent_storage_size = MEGABYTES(256);
 	playground_memory.transient_storage_size = GIGABYTES(1);
 
 	state->memory_size = playground_memory.permanent_storage_size + playground_memory.transient_storage_size;
