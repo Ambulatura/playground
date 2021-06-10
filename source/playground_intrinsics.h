@@ -58,6 +58,20 @@ inline u32 CeilF32ToU32(f32 value)
 	return result;
 }
 
+inline i32 FloorF32ToI32(f32 value)
+{
+	i32 result = (i32)floorf(value);
+
+	return result;
+}
+
+inline u32 FloorF32ToU32(f32 value)
+{
+	u32 result = (u32)floorf(value);
+
+	return result;
+}
+
 inline f32 SquareRoot(f32 value)
 {
 	f32 result = sqrtf(value);

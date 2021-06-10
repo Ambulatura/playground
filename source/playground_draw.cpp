@@ -130,7 +130,7 @@ struct BmpHeader
 };
 #pragma pack(pop)
 
-internal LoadedBmp LoadBmp(char* file_name, PlaygroundReadFileCallback* PlaygroundReadFile, u32 bitmap_align_x=0, u32 bitmap_align_y=0)
+internal LoadedBmp LoadBmp(char* file_name, PlaygroundReadFileCallback* PlaygroundReadFile, i32 bitmap_align_x=0, i32 bitmap_align_y=0)
 {
 	LoadedBmp loaded_bmp = {};
 	loaded_bmp.align_x = bitmap_align_x;
@@ -176,10 +176,38 @@ internal LoadedBmp LoadBmp(char* file_name, PlaygroundReadFileCallback* Playgrou
 	return loaded_bmp;
 }
 
+internal LoadedBmp ScaleBmp(PlaygroundMemoryArena* arena,
+							LoadedBmp* bitmap, i32 new_width, i32 new_height)
+{
+	LoadedBmp scaled_bitmap;
+	scaled_bitmap.pixels = PushArray(arena, new_width * new_height, u32);
+	scaled_bitmap.width = new_width;
+	scaled_bitmap.height = new_height;
+	
+	f32 x_ratio = (f32)(bitmap->width - 1) / (f32)new_width;
+	f32 y_ratio = (f32)(bitmap->height - 1) / (f32)new_height;
+
+	scaled_bitmap.align_x = (i32)(bitmap->align_x / x_ratio);
+	scaled_bitmap.align_y = (i32)(bitmap->align_y / y_ratio);
+
+	u32* bitmap_pixels = bitmap->pixels;
+	u32* scaled_bitmap_pixels = scaled_bitmap.pixels;
+	for (i32 y = 0; y < new_height; ++y) {
+		for (i32 x = 0; x < new_width; ++x) {
+			i32 scaled_x = FloorF32ToI32(x_ratio * x);
+			i32 scaled_y = FloorF32ToI32(y_ratio * y);
+
+			scaled_bitmap.pixels[y * new_width + x] = bitmap_pixels[scaled_y * bitmap->width + scaled_x];
+		}
+	}
+
+	return scaled_bitmap;
+}
+
 internal void DrawBitmap(PlaygroundDisplayBuffer* display_buffer,
 						 LoadedBmp* bitmap,
 						 f32 x, f32 y,
-						 u32 align_x=0, u32 align_y=0,
+						 i32 align_x=0, i32 align_y=0,
 						 b32 flip_horizontally=false)
 {
 	x -= flip_horizontally ? bitmap->width - align_x : align_x;

@@ -5,6 +5,7 @@ enum EntityType
 	NULL_TYPE,
 	
 	PLAYER_TYPE,
+	FAMILIAR_TYPE,
 	WALL_TYPE,
 	MONSTER_TYPE,
 	BALL_TYPE,
@@ -30,8 +31,8 @@ struct LoadedBmp
 	i32 width;
 	i32 height;
 
-	u32 align_x;
-	u32 align_y;
+	i32 align_x;
+	i32 align_y;
 };
 
 enum AnimationType
@@ -51,7 +52,7 @@ enum AnimationType
 
 struct AnimationFrame
 {
-	LoadedBmp sprite;
+	LoadedBmp* sprite;
 
 	// TODO(SSJSR): Can we use entities for hitboxes?
 	u32 hitboxes[4];

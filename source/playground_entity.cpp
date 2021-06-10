@@ -1,3 +1,18 @@
+internal Animation* AddAnimation(Entity* entity, AnimationType animation_type, f32 duration)
+{
+	Animation* animation = entity->animations + entity->animation_count++;
+	
+	animation->type = animation_type;
+	animation->duration = duration;
+
+	return animation;
+}
+
+internal void AddAnimationFrame(Animation* animation, LoadedBmp* sprite)
+{
+	animation->frames[animation->frame_count++].sprite = sprite;
+}
+
 inline Entity* GetEntity(World* world, u32 entity_index);
 internal void UpdateEntityTileMapAndTilePosition(World* world, Entity* entity, u32 entity_index, TilePosition* new_tile_position);
 
@@ -427,8 +442,10 @@ internal u32 AddBall(World* world)
 	return entity_index;
 }
 
-internal u32 AddPlayer(World* world)
+internal u32 AddPlayer(PlaygroundState* playground_state)
 {
+	World* world = &playground_state->world;
+	
 	TilePosition tile_position = {};
 	tile_position.tile_x = 6;
 	tile_position.tile_y = 5;
@@ -440,6 +457,69 @@ internal u32 AddPlayer(World* world)
 	AddFlags(entity, EntityFlag::COLLIDES_FLAG | EntityFlag::MOVEABLE_FLAG);
 
 	entity->ball_index = AddBall(world);
+
+	Animation* player_idle_animation = AddAnimation(entity, AnimationType::IDLE_ANIMATION_TYPE, 0.4f);
+	AddAnimationFrame(player_idle_animation, &playground_state->player_idle_00);
+	AddAnimationFrame(player_idle_animation, &playground_state->player_idle_01);
+	AddAnimationFrame(player_idle_animation, &playground_state->player_idle_02);
+	AddAnimationFrame(player_idle_animation, &playground_state->player_idle_03);
+	
+	Animation* player_run_animation = AddAnimation(entity, AnimationType::RUN_ANIMATION_TYPE, 0.6f);
+	AddAnimationFrame(player_run_animation, &playground_state->player_run_00);
+	AddAnimationFrame(player_run_animation, &playground_state->player_run_01);
+	AddAnimationFrame(player_run_animation, &playground_state->player_run_02);
+	AddAnimationFrame(player_run_animation, &playground_state->player_run_03);
+	AddAnimationFrame(player_run_animation, &playground_state->player_run_04);
+	AddAnimationFrame(player_run_animation, &playground_state->player_run_05);
+
+	Animation* player_jump_animation = AddAnimation(entity, AnimationType::JUMP_ANIMATION_TYPE, 0.2f);
+	// AddAnimationFrame(player_jump_animation, &playground_state->player_jump_00);
+	// AddAnimationFrame(player_jump_animation, &playground_state->player_jump_01);
+	AddAnimationFrame(player_jump_animation, &playground_state->player_jump_02);
+	AddAnimationFrame(player_jump_animation, &playground_state->player_jump_03);
+
+	Animation* player_jump_2_animation = AddAnimation(entity, AnimationType::JUMP_2_ANIMATION_TYPE, 0.2f);
+	AddAnimationFrame(player_jump_2_animation, &playground_state->player_jump_2_00);
+	AddAnimationFrame(player_jump_2_animation, &playground_state->player_jump_2_01);
+	AddAnimationFrame(player_jump_2_animation, &playground_state->player_jump_2_02);
+	AddAnimationFrame(player_jump_2_animation, &playground_state->player_jump_2_03);
+
+	Animation* player_fall_animation = AddAnimation(entity, AnimationType::FALL_ANIMATION_TYPE, 0.2f);
+	AddAnimationFrame(player_fall_animation, &playground_state->player_fall_00);
+	AddAnimationFrame(player_fall_animation, &playground_state->player_fall_01);
+
+	Animation* player_wall_slide_animation = AddAnimation(entity, AnimationType::WALL_SLIDE_ANIMATION_TYPE, 0.2f);
+	AddAnimationFrame(player_wall_slide_animation, &playground_state->player_wall_slide_00);
+	AddAnimationFrame(player_wall_slide_animation, &playground_state->player_wall_slide_01);
+
+	return entity_index;
+}
+
+internal u32 AddFamiliar(PlaygroundState* playground_state)
+{
+	World* world = &playground_state->world;
+	Entity* player_entity = GetEntity(world, world->player_entity_index);
+	TilePosition tile_position = player_entity->tile_position;
+	f32 width = 0.5f;
+	f32 height = 0.6f;
+	u32 entity_index = AddAlignedEntity(world, EntityType::FAMILIAR_TYPE, &tile_position, width, height);
+
+	Entity* entity = GetEntity(world, entity_index);
+	AddFlags(entity, EntityFlag::MOVEABLE_FLAG);
+
+	Animation* familiar_idle_animation = AddAnimation(entity, AnimationType::IDLE_ANIMATION_TYPE, 0.4f);
+	AddAnimationFrame(familiar_idle_animation, &playground_state->familiar_idle_00);
+	AddAnimationFrame(familiar_idle_animation, &playground_state->familiar_idle_01);
+	AddAnimationFrame(familiar_idle_animation, &playground_state->familiar_idle_02);
+	AddAnimationFrame(familiar_idle_animation, &playground_state->familiar_idle_03);
+
+		Animation* familiar_run_animation = AddAnimation(entity, AnimationType::RUN_ANIMATION_TYPE, 0.6f);
+	AddAnimationFrame(familiar_run_animation, &playground_state->familiar_run_00);
+	AddAnimationFrame(familiar_run_animation, &playground_state->familiar_run_01);
+	AddAnimationFrame(familiar_run_animation, &playground_state->familiar_run_02);
+	AddAnimationFrame(familiar_run_animation, &playground_state->familiar_run_03);
+	AddAnimationFrame(familiar_run_animation, &playground_state->familiar_run_02);
+	AddAnimationFrame(familiar_run_animation, &playground_state->familiar_run_03);
 
 	return entity_index;
 }
@@ -476,18 +556,15 @@ internal u32 AddMonster(World* world, i32 tile_x, i32 tile_y)
 }
 
 internal Animation* EntityStateControl(PlaygroundState* playground_state,
-								 Entity* entity,
-								 PlaygroundInput* input=0)
+									   Entity* entity,
+									   PlaygroundInput* input=0)
 {
-
+	ASSERT(input);
+	
 	Animation* entity_animation = 0;
-	b32 lock_animation_last_frame = false;
+	u32 animation_index = 0;
 	
 	if (entity->type == EntityType::PLAYER_TYPE) {
-		u32 animation_index = 0;
-
-		ASSERT(input);
-
 		if (IsFlagSet(entity, EntityFlag::ON_GROUND_FLAG)) {
 			ClearFlags(entity,
 					   EntityFlag::RUN_FLAG |
@@ -569,17 +646,25 @@ internal Animation* EntityStateControl(PlaygroundState* playground_state,
 				   EntityFlag::ON_WALL_FLAG |
 				   EntityFlag::ON_GROUND_FLAG |
 				   EntityFlag::FALL_FLAG);
-		
-		entity_animation = entity->animations + animation_index;
-		f32 seconds_per_frame = entity_animation->duration / (f32)entity_animation->frame_count;
-		entity_animation->total_elapsed_time += input->delta_time_for_frame;
+	}
+	else if (entity->type == EntityType::FAMILIAR_TYPE) {
+		animation_index = 0;
 
-		entity_animation->frame_index = (u32)(entity_animation->total_elapsed_time / seconds_per_frame);
-	
-		if (entity_animation->total_elapsed_time > entity_animation->duration) {
-			entity_animation->total_elapsed_time = 0.0;
-			entity_animation->frame_index = 0;
+		Entity* player_entity = GetEntity(&playground_state->world, playground_state->world.player_entity_index);
+		if (IsFlagSet(player_entity, EntityFlag::RUN_FLAG)) {
+			animation_index = 1;
 		}
+	}
+
+	entity_animation = entity->animations + animation_index;
+	f32 seconds_per_frame = entity_animation->duration / (f32)entity_animation->frame_count;
+	entity_animation->total_elapsed_time += input->delta_time_for_frame;
+
+	entity_animation->frame_index = (u32)(entity_animation->total_elapsed_time / seconds_per_frame);
+	
+	if (entity_animation->total_elapsed_time > entity_animation->duration) {
+		entity_animation->total_elapsed_time = 0.0;
+		entity_animation->frame_index = 0;
 	}
 
 	return entity_animation;

@@ -3,21 +3,6 @@
 #include "playground_world.cpp"
 #include "playground_entity.cpp"
 
-internal Animation* AddAnimation(Entity* entity, AnimationType animation_type, f32 duration)
-{
-	Animation* animation = entity->animations + entity->animation_count++;
-	
-	animation->type = animation_type;
-	animation->duration = duration;
-
-	return animation;
-}
-
-internal void AddAnimationFrame(Animation* animation, LoadedBmp* sprite)
-{
-	animation->frames[animation->frame_count++].sprite = *sprite;
-}
-
 // NOTE(SSJSR): Function signature:
 // PlaygroundUpdateAndRender(PlaygroundMemory* memory, PlaygroundDisplayBuffer* display_buffer, PlaygroundInput* input)
 extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
@@ -63,12 +48,12 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 				AddWall(world, tile_x_0, tile_y_0 + world->tile_count_y - 1,
 						(f32)world->tile_count_x, world->tile_side_in_meters);
-				
+
 				AddWall(world, tile_x_0 + world->tile_count_x - 1, tile_y_0 + 3,
 						world->tile_side_in_meters, (f32)world->tile_count_y - 4);
-				
+
 				AddWall(world, tile_x_0, tile_y_0,
-							(f32)world->tile_count_x, world->tile_side_in_meters);
+						(f32)world->tile_count_x, world->tile_side_in_meters);
 
 				// for (i32 y = 0; y < world->tile_count_y; ++y) {
 				// 	for (i32 x = 0; x < world->tile_count_x; ++x) {
@@ -96,115 +81,181 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 		}
 
 		world->player_entity_index =
-			AddPlayer(world);
+			AddPlayer(playground_state);
 
 		playground_state->background = LoadBmp("background_day_scaled.bmp", memory->PlaygroundReadFile, 0, 0);
+		playground_state->background = ScaleBmp(&playground_state->arena,
+												&playground_state->background,
+												playground_state->background.width * 2, playground_state->background.height * 2);
 
-		playground_state->fireball_00 = LoadBmp("fireball/FB001.bmp", memory->PlaygroundReadFile, 44, 15);
-		playground_state->fireball_01 = LoadBmp("fireball/FB002.bmp", memory->PlaygroundReadFile, 44, 15);
-		playground_state->fireball_02 = LoadBmp("fireball/FB003.bmp", memory->PlaygroundReadFile, 44, 15);
-		playground_state->fireball_03 = LoadBmp("fireball/FB004.bmp", memory->PlaygroundReadFile, 44, 15);
-		playground_state->fireball_04 = LoadBmp("fireball/FB005.bmp", memory->PlaygroundReadFile, 44, 15);
+		// NOTE(SSJSR): PLAYER!
+		{
+			// playground_state->fireball_00 = LoadBmp("fireball/FB001.bmp", memory->PlaygroundReadFile, 44, 15);
+			// playground_state->fireball_01 = LoadBmp("fireball/FB002.bmp", memory->PlaygroundReadFile, 44, 15);
+			// playground_state->fireball_02 = LoadBmp("fireball/FB003.bmp", memory->PlaygroundReadFile, 44, 15);
+			// playground_state->fireball_03 = LoadBmp("fireball/FB004.bmp", memory->PlaygroundReadFile, 44, 15);
+			// playground_state->fireball_04 = LoadBmp("fireball/FB005.bmp", memory->PlaygroundReadFile, 44, 15);
 
-		// NOTE(SSJSR): Idle state.
+			// NOTE(SSJSR): Idle state.
 
-		// playground_state->player_idle_00 = LoadBmp("adventurer/idle/adventurer-idle-2-00.bmp", memory->PlaygroundReadFile, 25, 22);
-		// playground_state->player_idle_01 = LoadBmp("adventurer/idle/adventurer-idle-2-01.bmp", memory->PlaygroundReadFile, 25, 22);
-		// playground_state->player_idle_02 = LoadBmp("adventurer/idle/adventurer-idle-2-02.bmp", memory->PlaygroundReadFile, 25, 22);
-		// playground_state->player_idle_03 = LoadBmp("adventurer/idle/adventurer-idle-2-03.bmp", memory->PlaygroundReadFile, 25, 22);
-		Entity* player_entity = GetEntity(world, world->player_entity_index);
+			f32 player_scale = 2.0f;
 
-		LoadedBmp player_idle_00 = LoadBmp("adventurer/idle/adventurer-idle-2-00.bmp", memory->PlaygroundReadFile, 25, 22);
-		LoadedBmp player_idle_01 = LoadBmp("adventurer/idle/adventurer-idle-2-01.bmp", memory->PlaygroundReadFile, 25, 22);
-		LoadedBmp player_idle_02 = LoadBmp("adventurer/idle/adventurer-idle-2-02.bmp", memory->PlaygroundReadFile, 25, 22);
-		LoadedBmp player_idle_03 = LoadBmp("adventurer/idle/adventurer-idle-2-03.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_idle_00 = LoadBmp("adventurer/idle/adventurer-idle-2-00.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_idle_01 = LoadBmp("adventurer/idle/adventurer-idle-2-01.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_idle_02 = LoadBmp("adventurer/idle/adventurer-idle-2-02.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_idle_03 = LoadBmp("adventurer/idle/adventurer-idle-2-03.bmp", memory->PlaygroundReadFile, 25, 22);
 
-		
-		Animation* player_idle_animation = AddAnimation(player_entity, AnimationType::IDLE_ANIMATION_TYPE, 0.4f);
-		
-		AddAnimationFrame(player_idle_animation, &player_idle_00);
-		AddAnimationFrame(player_idle_animation, &player_idle_01);
-		AddAnimationFrame(player_idle_animation, &player_idle_02);
-		AddAnimationFrame(player_idle_animation, &player_idle_03);
-		
-		// NOTE(SSJSR): Run state.
 
-		LoadedBmp player_run_00 = LoadBmp("adventurer/run/adventurer-run3-00.bmp", memory->PlaygroundReadFile, 25, 22);
-		LoadedBmp player_run_01 = LoadBmp("adventurer/run/adventurer-run3-01.bmp", memory->PlaygroundReadFile, 25, 22);
-		LoadedBmp player_run_02 = LoadBmp("adventurer/run/adventurer-run3-02.bmp", memory->PlaygroundReadFile, 25, 22);
-		LoadedBmp player_run_03 = LoadBmp("adventurer/run/adventurer-run3-03.bmp", memory->PlaygroundReadFile, 25, 22);
-		LoadedBmp player_run_04 = LoadBmp("adventurer/run/adventurer-run3-04.bmp", memory->PlaygroundReadFile, 25, 22);
-		LoadedBmp player_run_05 = LoadBmp("adventurer/run/adventurer-run3-05.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_idle_00 = ScaleBmp(&playground_state->arena,
+														&playground_state->player_idle_00,
+														(i32)(playground_state->player_idle_00.width * player_scale),
+														(i32)(playground_state->player_idle_00.height * player_scale));
+			playground_state->player_idle_01 = ScaleBmp(&playground_state->arena,
+														&playground_state->player_idle_01,
+														(i32)(playground_state->player_idle_01.width * player_scale),
+														(i32)(playground_state->player_idle_01.height * player_scale));
+			playground_state->player_idle_02 = ScaleBmp(&playground_state->arena,
+														&playground_state->player_idle_02,
+														(i32)(playground_state->player_idle_02.width * player_scale),
+														(i32)(playground_state->player_idle_02.height * player_scale));
+			playground_state->player_idle_03 = ScaleBmp(&playground_state->arena,
+														&playground_state->player_idle_03,
+														(i32)(playground_state->player_idle_03.width * player_scale),
+														(i32)(playground_state->player_idle_03.height * player_scale));
+			// NOTE(SSJSR): Run state.
 
-		Animation* player_run_animation = AddAnimation(player_entity, AnimationType::RUN_ANIMATION_TYPE, 0.6f);
-		
-		AddAnimationFrame(player_run_animation, &player_run_00);
-		AddAnimationFrame(player_run_animation, &player_run_01);
-		AddAnimationFrame(player_run_animation, &player_run_02);
-		AddAnimationFrame(player_run_animation, &player_run_03);
-		AddAnimationFrame(player_run_animation, &player_run_04);
-		AddAnimationFrame(player_run_animation, &player_run_05);
-		
-		// NOTE(SSJSR): Jump state.
+			playground_state->player_run_00 = LoadBmp("adventurer/run/adventurer-run3-00.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_run_01 = LoadBmp("adventurer/run/adventurer-run3-01.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_run_02 = LoadBmp("adventurer/run/adventurer-run3-02.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_run_03 = LoadBmp("adventurer/run/adventurer-run3-03.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_run_04 = LoadBmp("adventurer/run/adventurer-run3-04.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_run_05 = LoadBmp("adventurer/run/adventurer-run3-05.bmp", memory->PlaygroundReadFile, 25, 22);
 
-		// LoadedBmp player_jump_00 = LoadBmp("adventurer/jump/adventurer-jump-00.bmp", memory->PlaygroundReadFile, 25, 22);
-		// LoadedBmp player_jump_01 = LoadBmp("adventurer/jump/adventurer-jump-01.bmp", memory->PlaygroundReadFile, 25, 22);
-		LoadedBmp player_jump_02 = LoadBmp("adventurer/jump/adventurer-jump-02.bmp", memory->PlaygroundReadFile, 25, 22);
-		LoadedBmp player_jump_03 = LoadBmp("adventurer/jump/adventurer-jump-03.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_run_00 = ScaleBmp(&playground_state->arena,
+													   &playground_state->player_run_00,
+													   (i32)(playground_state->player_run_00.width * player_scale),
+													   (i32)(playground_state->player_run_00.height * player_scale));
+			playground_state->player_run_01 = ScaleBmp(&playground_state->arena,
+													   &playground_state->player_run_01,
+													   (i32)(playground_state->player_run_01.width * player_scale),
+													   (i32)(playground_state->player_run_01.height * player_scale));
+			playground_state->player_run_02 = ScaleBmp(&playground_state->arena,
+													   &playground_state->player_run_02,
+													   (i32)(playground_state->player_run_02.width * player_scale),
+													   (i32)(playground_state->player_run_02.height * player_scale));
+			playground_state->player_run_03 = ScaleBmp(&playground_state->arena,
+													   &playground_state->player_run_03,
+													   (i32)(playground_state->player_run_03.width * player_scale),
+													   (i32)(playground_state->player_run_03.height * player_scale));
+			playground_state->player_run_04 = ScaleBmp(&playground_state->arena,
+													   &playground_state->player_run_04,
+													   (i32)(playground_state->player_run_04.width * player_scale),
+													   (i32)(playground_state->player_run_04.height * player_scale));
+			playground_state->player_run_05 = ScaleBmp(&playground_state->arena,
+													   &playground_state->player_run_05,
+													   (i32)(playground_state->player_run_05.width * player_scale),
+													   (i32)(playground_state->player_run_05.height * player_scale));
 
-		Animation* player_jump_animation = AddAnimation(player_entity, AnimationType::JUMP_ANIMATION_TYPE, 0.2f);
+			// NOTE(SSJSR): Jump state.
 
-		// AddAnimationFrame(player_jump_animation, &player_jump_00);
-		// AddAnimationFrame(player_jump_animation, &player_jump_01);
-		AddAnimationFrame(player_jump_animation, &player_jump_02);
-		AddAnimationFrame(player_jump_animation, &player_jump_03);
+			// LoadedBmp player_jump_00 = LoadBmp("adventurer/jump/adventurer-jump-00.bmp", memory->PlaygroundReadFile, 25, 22);
+			// LoadedBmp player_jump_01 = LoadBmp("adventurer/jump/adventurer-jump-01.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_jump_02 = LoadBmp("adventurer/jump/adventurer-jump-02.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_jump_03 = LoadBmp("adventurer/jump/adventurer-jump-03.bmp", memory->PlaygroundReadFile, 25, 22);
 
-		// NOTE(SSJSR): Jump 2 state.
+			playground_state->player_jump_02 = ScaleBmp(&playground_state->arena,
+														&playground_state->player_jump_02,
+														(i32)(playground_state->player_jump_02.width * player_scale),
+														(i32)(playground_state->player_jump_02.height * player_scale));
+			playground_state->player_jump_03 = ScaleBmp(&playground_state->arena,
+														&playground_state->player_jump_03,
+														(i32)(playground_state->player_jump_03.width * player_scale),
+														(i32)(playground_state->player_jump_03.height * player_scale));
 
-		LoadedBmp player_jump_2_00 = LoadBmp("adventurer/jump/adventurer-smrslt-00.bmp", memory->PlaygroundReadFile, 25, 22);
-		LoadedBmp player_jump_2_01 = LoadBmp("adventurer/jump/adventurer-smrslt-01.bmp", memory->PlaygroundReadFile, 25, 22);
-		LoadedBmp player_jump_2_02 = LoadBmp("adventurer/jump/adventurer-smrslt-02.bmp", memory->PlaygroundReadFile, 25, 22);
-		LoadedBmp player_jump_2_03 = LoadBmp("adventurer/jump/adventurer-smrslt-03.bmp", memory->PlaygroundReadFile, 25, 22);
+			// NOTE(SSJSR): Jump 2 state.
 
-		Animation* player_jump_2_animation = AddAnimation(player_entity, AnimationType::JUMP_2_ANIMATION_TYPE, 0.2f);
+			playground_state->player_jump_2_00 = LoadBmp("adventurer/jump/adventurer-smrslt-00.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_jump_2_01 = LoadBmp("adventurer/jump/adventurer-smrslt-01.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_jump_2_02 = LoadBmp("adventurer/jump/adventurer-smrslt-02.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_jump_2_03 = LoadBmp("adventurer/jump/adventurer-smrslt-03.bmp", memory->PlaygroundReadFile, 25, 22);
 
-		AddAnimationFrame(player_jump_2_animation, &player_jump_2_00);
-		AddAnimationFrame(player_jump_2_animation, &player_jump_2_01);
-		AddAnimationFrame(player_jump_2_animation, &player_jump_2_02);
-		AddAnimationFrame(player_jump_2_animation, &player_jump_2_03);
+			playground_state->player_jump_2_00 = ScaleBmp(&playground_state->arena,
+														  &playground_state->player_jump_2_00,
+														  (i32)(playground_state->player_jump_2_00.width * player_scale),
+														  (i32)(playground_state->player_jump_2_00.height * player_scale));
+			playground_state->player_jump_2_01 = ScaleBmp(&playground_state->arena,
+														  &playground_state->player_jump_2_01,
+														  (i32)(playground_state->player_jump_2_01.width * player_scale),
+														  (i32)(playground_state->player_jump_2_01.height * player_scale));
+			playground_state->player_jump_2_02 = ScaleBmp(&playground_state->arena,
+														  &playground_state->player_jump_2_02,
+														  (i32)(playground_state->player_jump_2_02.width * player_scale),
+														  (i32)(playground_state->player_jump_2_02.height * player_scale));
+			playground_state->player_jump_2_03 = ScaleBmp(&playground_state->arena,
+														  &playground_state->player_jump_2_03,
+														  (i32)(playground_state->player_jump_2_03.width * player_scale),
+														  (i32)(playground_state->player_jump_2_03.height * player_scale));
 
-		// NOTE(SSJSR): Fall state.
+			// NOTE(SSJSR): Fall state.
 
-		LoadedBmp player_fall_00 = LoadBmp("adventurer/fall/adventurer-fall-00.bmp", memory->PlaygroundReadFile, 25, 22);
-		LoadedBmp player_fall_01 = LoadBmp("adventurer/fall/adventurer-fall-01.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_fall_00 = LoadBmp("adventurer/fall/adventurer-fall-00.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_fall_01 = LoadBmp("adventurer/fall/adventurer-fall-01.bmp", memory->PlaygroundReadFile, 25, 22);
 
-		Animation* player_fall_animation = AddAnimation(player_entity, AnimationType::FALL_ANIMATION_TYPE, 0.2f);
-		
-		AddAnimationFrame(player_fall_animation, &player_fall_00);
-		AddAnimationFrame(player_fall_animation, &player_fall_01);
+			playground_state->player_fall_00 = ScaleBmp(&playground_state->arena,
+														&playground_state->player_fall_00,
+														(i32)(playground_state->player_fall_00.width * player_scale),
+														(i32)(playground_state->player_fall_00.height * player_scale));
+			playground_state->player_fall_01 = ScaleBmp(&playground_state->arena,
+														&playground_state->player_fall_01,
+														(i32)(playground_state->player_fall_01.width * player_scale),
+														(i32)(playground_state->player_fall_01.height * player_scale));
 
-		// NOTE(SSJSR): Wall slide state.
+			// NOTE(SSJSR): Wall slide state.
 
-		LoadedBmp player_wall_slide_00 = LoadBmp("adventurer/wall_slide/adventurer-wall-slide-00.bmp", memory->PlaygroundReadFile, 25, 22);
-		LoadedBmp player_wall_slide_01 = LoadBmp("adventurer/wall_slide/adventurer-wall-slide-01.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_wall_slide_00 = LoadBmp("adventurer/wall_slide/adventurer-wall-slide-00.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_wall_slide_01 = LoadBmp("adventurer/wall_slide/adventurer-wall-slide-01.bmp", memory->PlaygroundReadFile, 25, 22);
 
-		Animation* player_wall_slide_animation = AddAnimation(player_entity, AnimationType::WALL_SLIDE_ANIMATION_TYPE, 0.2f);
-		
-		AddAnimationFrame(player_wall_slide_animation, &player_wall_slide_00);
-		AddAnimationFrame(player_wall_slide_animation, &player_wall_slide_01);
-		
-		// NOTE(SSJSR): Cast state.
+			playground_state->player_wall_slide_00 = ScaleBmp(&playground_state->arena,
+															  &playground_state->player_wall_slide_00,
+															  (i32)(playground_state->player_wall_slide_00.width * player_scale),
+															  (i32)(playground_state->player_wall_slide_00.height * player_scale));
+			playground_state->player_wall_slide_01 = ScaleBmp(&playground_state->arena,
+															  &playground_state->player_wall_slide_01,
+															  (i32)(playground_state->player_wall_slide_01.width * player_scale),
+															  (i32)(playground_state->player_wall_slide_01.height * player_scale));
 
-		playground_state->player_cast_00 = LoadBmp("adventurer/cast/adventurer-cast-00.bmp", memory->PlaygroundReadFile, 25, 22);
-		playground_state->player_cast_01 = LoadBmp("adventurer/cast/adventurer-cast-01.bmp", memory->PlaygroundReadFile, 25, 22);
-		playground_state->player_cast_02 = LoadBmp("adventurer/cast/adventurer-cast-02.bmp", memory->PlaygroundReadFile, 25, 22);
-		playground_state->player_cast_03 = LoadBmp("adventurer/cast/adventurer-cast-03.bmp", memory->PlaygroundReadFile, 25, 22);
+			// NOTE(SSJSR): Cast state.
+
+			// playground_state->player_cast_00 = LoadBmp("adventurer/cast/adventurer-cast-00.bmp", memory->PlaygroundReadFile, 25, 22);
+			// playground_state->player_cast_01 = LoadBmp("adventurer/cast/adventurer-cast-01.bmp", memory->PlaygroundReadFile, 25, 22);
+			// playground_state->player_cast_02 = LoadBmp("adventurer/cast/adventurer-cast-02.bmp", memory->PlaygroundReadFile, 25, 22);
+			// playground_state->player_cast_03 = LoadBmp("adventurer/cast/adventurer-cast-03.bmp", memory->PlaygroundReadFile, 25, 22);
+		}
+
+		// NOTE(SSJSR): FAMILIAR!
+		{
+			// NOTE(SSJSR): Idle state.
+			
+			playground_state->familiar_idle_00 = LoadBmp("familiar/idle/owlet-monster-idle-00.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_idle_01 = LoadBmp("familiar/idle/owlet-monster-idle-01.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_idle_02 = LoadBmp("familiar/idle/owlet-monster-idle-02.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_idle_03 = LoadBmp("familiar/idle/owlet-monster-idle-03.bmp", memory->PlaygroundReadFile, 15, 14);
+
+			// NOTE(SSJSR): Run state.
+			
+			playground_state->familiar_run_00 = LoadBmp("familiar/run/owlet-monster-run-00.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_run_01 =	LoadBmp("familiar/run/owlet-monster-run-01.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_run_02 =	LoadBmp("familiar/run/owlet-monster-run-02.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_run_03 =	LoadBmp("familiar/run/owlet-monster-run-03.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_run_04 = LoadBmp("familiar/run/owlet-monster-run-04.bmp", memory->PlaygroundReadFile, 15, 14);
+		}	playground_state->familiar_run_05 = LoadBmp("familiar/run/owlet-monster-run-05.bmp", memory->PlaygroundReadFile, 15, 14);
 
 		AddWall(world, 3, 3, 2.0f, 13.0f);
 		AddWall(world, 8, 2, 13.0f, 2.0f);
 		AddWall(world, 10, 6, 13.0f, 2.0f);
 
 		AddMonster(world, world->tile_count_x - 7, 10);
+		AddFamiliar(playground_state);
 
 		world->camera.tile_x = world->tile_count_x / 2;
 		world->camera.tile_y = world->tile_count_y / 2;
@@ -277,7 +328,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 			if (entity->type == EntityType::PLAYER_TYPE) {
 				// ++entity->ticks;
 				Animation* entity_animation = EntityStateControl(playground_state, entity, input);
-				
+
 				move_feature.direction = entity->direction;
 				move_feature.acceleration = v2(80.0f, entity->acceleration.y);
 				move_feature.friction_coefficient = 8.0;
@@ -296,21 +347,46 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 													 v2(15.0f * direction_x, 0.0f));
 				}
 
-				DrawRectangleWithBorder(display_buffer,
-										entity_min.x, entity_min.y,
-										entity_max.x, entity_max.y,
-										1.0f, 0.4f, 0.2f,
-										1,
-										0.7f, 0.3f, 0.5f,
-										true);
+				// DrawRectangleWithBorder(display_buffer,
+				// 						entity_min.x, entity_min.y,
+				// 						entity_max.x, entity_max.y,
+				// 						1.0f, 0.4f, 0.2f,
+				// 						1,
+				// 						0.7f, 0.3f, 0.5f,
+				// 						true);
 
-				b32 flip_horizontally = false;
-				if (entity->facing_direction == 1) {
-					flip_horizontally = true;
-				}
+				LoadedBmp* sprite = entity_animation->frames[entity_animation->frame_index].sprite;
 
-				LoadedBmp* sprite = &entity_animation->frames[entity_animation->frame_index].sprite;
-				
+				b32 flip_horizontally = entity->facing_direction == 1 ?
+					true : false;
+
+				DrawBitmap(display_buffer, sprite,
+						   entity_ground_point_x, entity_ground_point_y,
+						   sprite->align_x, sprite->align_y,
+						   flip_horizontally);
+			}
+			else if (entity->type == EntityType::FAMILIAR_TYPE) {
+				Entity* player_entity = GetEntity(world, world->player_entity_index);
+
+				// DrawRectangleWithBorder(display_buffer,
+				// 						entity_min.x, entity_min.y,
+				// 						entity_max.x, entity_max.y,
+				// 						1.0f, 0.4f, 0.2f,
+				// 						1,
+				// 						1.0f, 1.0f, 1.0f,
+				// 						true);
+
+				Animation* entity_animation = EntityStateControl(playground_state, entity, input);
+				LoadedBmp* sprite = entity_animation->frames[entity_animation->frame_index].sprite;
+
+				b32 flip_horizontally = player_entity->facing_direction == 1 ?
+					true : false;
+
+				entity->position = player_entity->position;
+				entity->position.x -= player_entity->facing_direction == 1 ?
+					-0.7f : 0.7f;
+				entity->position.y -= 0.1f;
+
 				DrawBitmap(display_buffer, sprite,
 						   entity_ground_point_x, entity_ground_point_y,
 						   sprite->align_x, sprite->align_y,
@@ -367,7 +443,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				// 			  0.18f, 0.18f, 0.18f);
 
 				f32 thickness = world->meters_to_pixels * 0.1f;
-				
+
 				DrawRectangle(display_buffer,
 							  entity_min.x, entity_min.y - thickness * 0.5f,
 							  entity_max.x, entity_min.y + thickness * 0.5f,
@@ -466,7 +542,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 	// 		f32 min_y = y * world->tile_side_in_pixels;
 	// 		f32 max_x = min_x + world->tile_side_in_pixels;
 	// 		f32 max_y = min_y + world->tile_side_in_pixels;
-			
+
 	// 		DrawRectangleWithBorder(display_buffer,
 	// 								min_x, min_y,
 	// 								max_x, max_y,
