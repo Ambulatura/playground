@@ -21,5 +21,4 @@
 </ul>
 
 ## Media
-![](media/screen_video.gif)
-![](media/zooming.gif)
+![](media/screen.gif)
