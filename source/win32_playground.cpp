@@ -8,8 +8,8 @@
 #include "win32_timer.cpp"
 
 global_variable b32 global_running;
-global_variable Win32DisplayBuffer global_display_buffer;
-global_variable WINDOWPLACEMENT global_window_position = { sizeof(global_window_position) };
+// global_variable Win32DisplayBuffer global_display_buffer;
+// global_variable WINDOWPLACEMENT global_window_position = { sizeof(global_window_position) };
 
 PLATFORM_FREE_FILE(Win32FreeFile)
 {
@@ -66,7 +66,7 @@ PLATFORM_READ_FILE(Win32ReadFile)
 	return result;
 }
 
-internal void Win32ToggleFullscreen(HWND window_handle)
+internal void Win32ToggleFullscreen(HWND window_handle, WINDOWPLACEMENT* window_position)
 {
 	// NOTE(SSJSR): This follows Raymond Chen's prescription
 	// for fullscreen toggling, see:
@@ -75,7 +75,7 @@ internal void Win32ToggleFullscreen(HWND window_handle)
 	DWORD style = GetWindowLong(window_handle, GWL_STYLE);
 	if (style & WS_OVERLAPPEDWINDOW) {
 		MONITORINFO monitor_info = { sizeof(monitor_info) };
-		if (GetWindowPlacement(window_handle, &global_window_position) &&
+		if (GetWindowPlacement(window_handle, window_position) &&
 			GetMonitorInfo(MonitorFromWindow(window_handle,
 											 MONITOR_DEFAULTTOPRIMARY), &monitor_info)) {
 			SetWindowLong(window_handle, GWL_STYLE,
@@ -90,7 +90,7 @@ internal void Win32ToggleFullscreen(HWND window_handle)
 	else {
 		SetWindowLong(window_handle, GWL_STYLE,
 					  style | WS_OVERLAPPEDWINDOW);
-		SetWindowPlacement(window_handle, &global_window_position);
+		SetWindowPlacement(window_handle, window_position);
 		SetWindowPos(window_handle, NULL, 0, 0, 0, 0,
 					 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
 					 SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
@@ -398,7 +398,9 @@ internal LRESULT CALLBACK Win32WindowProc(HWND window_handle,
 			HDC device_context = BeginPaint(window_handle, &paint_struct);
 
 			Win32WindowSize window_size = Win32GetWindowSize(window_handle);
-			Win32ShowDisplayBufferInWindow(device_context, &global_display_buffer,
+			Win32MessageLoopInformation* information =
+				(Win32MessageLoopInformation*)GetWindowLongPtr(window_handle, GWLP_USERDATA);
+			Win32ShowDisplayBufferInWindow(device_context, &information->display_buffer,
 										   window_size.width, window_size.height);
 
 			EndPaint(window_handle, &paint_struct);
@@ -433,7 +435,7 @@ internal LRESULT CALLBACK Win32WindowProc(HWND window_handle,
 
 			if (key_code == VK_RETURN) {
 				if (is_down && alt_is_down) {
-					Win32ToggleFullscreen(window_handle);
+					Win32ToggleFullscreen(window_handle, &information->window_position);
 				}
 			}
 			else if (key_code == 'W') {
@@ -653,9 +655,11 @@ int WINAPI WinMain(HINSTANCE instance,
 	Win32Timer timer;
 	Win32TimerInitialize(&timer);
 
-	Win32ResizeDisplayBuffer(&global_display_buffer, 1920, 1080);
-
 	Win32MessageLoopInformation information = {};
+	information.window_position = { sizeof(information.window_position) };
+	
+	Win32ResizeDisplayBuffer(&information.display_buffer, 1920, 1080);
+
 	Win32State* state = &information.state;
 
 	Win32FindExecutableFilePath(state);
@@ -806,8 +810,8 @@ int WINAPI WinMain(HINSTANCE instance,
 		information.new_playground_input->mouse_x = mouse_position.x - client_rect_left_top.x;
 		information.new_playground_input->mouse_y = mouse_position.y - client_rect_left_top.y;
 
-		information.new_playground_input->mouse_x = global_display_buffer.width * information.new_playground_input->mouse_x / global_display_buffer.destination_width;
-		information.new_playground_input->mouse_y = global_display_buffer.height * information.new_playground_input->mouse_y / global_display_buffer.destination_height;
+		information.new_playground_input->mouse_x = information.display_buffer.width * information.new_playground_input->mouse_x / information.display_buffer.destination_width;
+		information.new_playground_input->mouse_y = information.display_buffer.height * information.new_playground_input->mouse_y / information.display_buffer.destination_height;
 
 		// char mouse_buffer[256];
 		// _snprintf_s(mouse_buffer, sizeof(mouse_buffer), "(%d, %d)\n",
@@ -827,12 +831,11 @@ int WINAPI WinMain(HINSTANCE instance,
 		// Win32ProcessMessages(state, new_playground_input);
 
 		PlaygroundDisplayBuffer playground_display_buffer = {};
-		playground_display_buffer.memory = global_display_buffer.memory;
-		playground_display_buffer.width = global_display_buffer.width;
-		playground_display_buffer.height = global_display_buffer.height;
-		playground_display_buffer.pitch = global_display_buffer.pitch;
-		playground_display_buffer.bytes_per_pixel = global_display_buffer.bytes_per_pixel;
-		playground_display_buffer.size = global_display_buffer.size;
+		playground_display_buffer.memory = information.display_buffer.memory;
+		playground_display_buffer.width = information.display_buffer.width;
+		playground_display_buffer.height = information.display_buffer.height;
+		playground_display_buffer.pitch = information.display_buffer.pitch;
+		playground_display_buffer.size = information.display_buffer.size;
 
 		if (state->input_record) {
 			Win32InputRecord(state, information.new_playground_input);
@@ -848,7 +851,7 @@ int WINAPI WinMain(HINSTANCE instance,
 
 		HDC device_context = GetDC(window_handle);
 		Win32WindowSize window_size = Win32GetWindowSize(window_handle);
-		Win32ShowDisplayBufferInWindow(device_context, &global_display_buffer,
+		Win32ShowDisplayBufferInWindow(device_context, &information.display_buffer,
 									   window_size.width, window_size.height);
 		ReleaseDC(window_handle, device_context);
 

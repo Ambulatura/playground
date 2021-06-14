@@ -1,16 +1,38 @@
-internal Animation* AddAnimation(Entity* entity, AnimationType animation_type, f32 duration)
+internal AnimationGroup* MakeAnimationGroup(PlaygroundState* playground_state,
+											u32 animation_count, f32 duration, AnimationType group_type,
+											Bitmap** sprites, u32* frame_counts)
 {
-	Animation* animation = entity->animations + entity->animation_count++;
-	
-	animation->type = animation_type;
-	animation->duration = duration;
+	AnimationGroup* animation_group = PushStruct(&playground_state->arena, AnimationGroup);
+	animation_group->animation_count = animation_count;
+	animation_group->animations = PushArray(&playground_state->arena, animation_group->animation_count, Animation);
+	animation_group->group_type = group_type;
+	u32 last_frame_count = 0;
 
-	return animation;
+	for (u32 animation_index = 0; animation_index < animation_group->animation_count; ++animation_index) {
+		Animation* animation = animation_group->animations + animation_index;
+		animation->duration = duration;
+		animation->total_elapsed_time = 0.0f;
+
+		u32 frame_count = frame_counts[animation_index];
+		animation->frame_count = frame_count;
+		for (u32 frame_index = 0; frame_index < animation->frame_count; ++frame_index) {
+			AnimationFrame* frame = animation->frames + frame_index;
+			frame->sprite = sprites[frame_index + last_frame_count];
+		}
+		
+		last_frame_count = animation->frame_count;
+	}
+
+	return animation_group;
 }
 
-internal void AddAnimationFrame(Animation* animation, LoadedBmp* sprite)
+internal void AddAnimationGroup(Entity* entity, AnimationGroup* animation_group)
 {
-	animation->frames[animation->frame_count++].sprite = sprite;
+	u32 index = animation_group->group_type;
+	ASSERT(index < ARRAY_COUNT(entity->animation_groups));
+	ASSERT(entity->animation_group_count < ARRAY_COUNT(entity->animation_groups) - 1);
+	entity->animation_groups[index] = animation_group;
+	entity->animation_group_count++;
 }
 
 inline Entity* GetEntity(World* world, u32 entity_index);
@@ -458,40 +480,13 @@ internal u32 AddPlayer(PlaygroundState* playground_state)
 
 	entity->ball_index = AddBall(world);
 
-	Animation* player_idle_animation = AddAnimation(entity, AnimationType::IDLE_ANIMATION_TYPE, 0.4f);
-	AddAnimationFrame(player_idle_animation, &playground_state->player_idle_00);
-	AddAnimationFrame(player_idle_animation, &playground_state->player_idle_01);
-	AddAnimationFrame(player_idle_animation, &playground_state->player_idle_02);
-	AddAnimationFrame(player_idle_animation, &playground_state->player_idle_03);
+	AddAnimationGroup(entity, playground_state->player_idle_animations);
+	AddAnimationGroup(entity, playground_state->player_run_animations);
+	AddAnimationGroup(entity, playground_state->player_jump_animations);
+	AddAnimationGroup(entity, playground_state->player_jump_2_animations);
+	AddAnimationGroup(entity, playground_state->player_fall_animations);
+	AddAnimationGroup(entity, playground_state->player_wall_slide_animations);
 	
-	Animation* player_run_animation = AddAnimation(entity, AnimationType::RUN_ANIMATION_TYPE, 0.6f);
-	AddAnimationFrame(player_run_animation, &playground_state->player_run_00);
-	AddAnimationFrame(player_run_animation, &playground_state->player_run_01);
-	AddAnimationFrame(player_run_animation, &playground_state->player_run_02);
-	AddAnimationFrame(player_run_animation, &playground_state->player_run_03);
-	AddAnimationFrame(player_run_animation, &playground_state->player_run_04);
-	AddAnimationFrame(player_run_animation, &playground_state->player_run_05);
-
-	Animation* player_jump_animation = AddAnimation(entity, AnimationType::JUMP_ANIMATION_TYPE, 0.2f);
-	// AddAnimationFrame(player_jump_animation, &playground_state->player_jump_00);
-	// AddAnimationFrame(player_jump_animation, &playground_state->player_jump_01);
-	AddAnimationFrame(player_jump_animation, &playground_state->player_jump_02);
-	AddAnimationFrame(player_jump_animation, &playground_state->player_jump_03);
-
-	Animation* player_jump_2_animation = AddAnimation(entity, AnimationType::JUMP_2_ANIMATION_TYPE, 0.2f);
-	AddAnimationFrame(player_jump_2_animation, &playground_state->player_jump_2_00);
-	AddAnimationFrame(player_jump_2_animation, &playground_state->player_jump_2_01);
-	AddAnimationFrame(player_jump_2_animation, &playground_state->player_jump_2_02);
-	AddAnimationFrame(player_jump_2_animation, &playground_state->player_jump_2_03);
-
-	Animation* player_fall_animation = AddAnimation(entity, AnimationType::FALL_ANIMATION_TYPE, 0.2f);
-	AddAnimationFrame(player_fall_animation, &playground_state->player_fall_00);
-	AddAnimationFrame(player_fall_animation, &playground_state->player_fall_01);
-
-	Animation* player_wall_slide_animation = AddAnimation(entity, AnimationType::WALL_SLIDE_ANIMATION_TYPE, 0.2f);
-	AddAnimationFrame(player_wall_slide_animation, &playground_state->player_wall_slide_00);
-	AddAnimationFrame(player_wall_slide_animation, &playground_state->player_wall_slide_01);
-
 	return entity_index;
 }
 
@@ -507,19 +502,8 @@ internal u32 AddFamiliar(PlaygroundState* playground_state)
 	Entity* entity = GetEntity(world, entity_index);
 	AddFlags(entity, EntityFlag::MOVEABLE_FLAG);
 
-	Animation* familiar_idle_animation = AddAnimation(entity, AnimationType::IDLE_ANIMATION_TYPE, 0.4f);
-	AddAnimationFrame(familiar_idle_animation, &playground_state->familiar_idle_00);
-	AddAnimationFrame(familiar_idle_animation, &playground_state->familiar_idle_01);
-	AddAnimationFrame(familiar_idle_animation, &playground_state->familiar_idle_02);
-	AddAnimationFrame(familiar_idle_animation, &playground_state->familiar_idle_03);
-
-		Animation* familiar_run_animation = AddAnimation(entity, AnimationType::RUN_ANIMATION_TYPE, 0.6f);
-	AddAnimationFrame(familiar_run_animation, &playground_state->familiar_run_00);
-	AddAnimationFrame(familiar_run_animation, &playground_state->familiar_run_01);
-	AddAnimationFrame(familiar_run_animation, &playground_state->familiar_run_02);
-	AddAnimationFrame(familiar_run_animation, &playground_state->familiar_run_03);
-	AddAnimationFrame(familiar_run_animation, &playground_state->familiar_run_02);
-	AddAnimationFrame(familiar_run_animation, &playground_state->familiar_run_03);
+	AddAnimationGroup(entity, playground_state->familiar_idle_animations);
+	AddAnimationGroup(entity, playground_state->familiar_run_animations);
 
 	return entity_index;
 }
@@ -555,14 +539,14 @@ internal u32 AddMonster(World* world, i32 tile_x, i32 tile_y)
 	return entity_index;
 }
 
-internal Animation* EntityStateControl(PlaygroundState* playground_state,
+internal AnimationGroup* EntityStateControl(PlaygroundState* playground_state,
 									   Entity* entity,
 									   PlaygroundInput* input=0)
 {
 	ASSERT(input);
 	
-	Animation* entity_animation = 0;
-	u32 animation_index = 0;
+	AnimationGroup* entity_animation_group = 0;
+	u32 animation_group_index = AnimationType::IDLE_ANIMATION_TYPE;
 	
 	if (entity->type == EntityType::PLAYER_TYPE) {
 		if (IsFlagSet(entity, EntityFlag::ON_GROUND_FLAG)) {
@@ -575,7 +559,7 @@ internal Animation* EntityStateControl(PlaygroundState* playground_state,
 
 		}
 		if (IsFlagSet(entity, EntityFlag::ON_WALL_FLAG)) {
-			animation_index = 5;
+			animation_group_index = AnimationType::WALL_SLIDE_ANIMATION_TYPE;
 			ClearFlags(entity,
 					   EntityFlag::RUN_FLAG |
 					   EntityFlag::JUMP_FLAG |
@@ -584,14 +568,14 @@ internal Animation* EntityStateControl(PlaygroundState* playground_state,
 					   EntityFlag::ON_GROUND_FLAG);
 		}
 		if (IsFlagSet(entity, EntityFlag::JUMP_FLAG)) {
-			animation_index = 2;
+			animation_group_index = AnimationType::JUMP_ANIMATION_TYPE;
 		}
 		if (IsFlagSet(entity, EntityFlag::DOUBLE_JUMP_FLAG)) {
-			animation_index = 3;
+			animation_group_index = AnimationType::JUMP_2_ANIMATION_TYPE;
 		}
 
 		if (IsFlagSet(entity, EntityFlag::FALL_FLAG)) {
-			animation_index = 4;
+			animation_group_index = AnimationType::FALL_ANIMATION_TYPE;
 		}
 
 		entity->direction = v2(0.0f, -1.0f);
@@ -609,7 +593,7 @@ internal Animation* EntityStateControl(PlaygroundState* playground_state,
 				
 				AddFlags(entity, EntityFlag::JUMP_FLAG);
 				ClearFlags(entity, EntityFlag::ON_GROUND_FLAG);
-				animation_index = 2;
+				animation_group_index = AnimationType::JUMP_ANIMATION_TYPE;
 			}
 			else if ((IsFlagSet(entity, EntityFlag::ON_WALL_FLAG) ||
 					  IsFlagSet(entity, EntityFlag::FALL_FLAG)) &&
@@ -620,7 +604,7 @@ internal Animation* EntityStateControl(PlaygroundState* playground_state,
 				AddFlags(entity, EntityFlag::DOUBLE_JUMP_FLAG);
 				ClearFlags(entity,
 						   EntityFlag::JUMP_FLAG | EntityFlag::FALL_FLAG);
-				animation_index = 3;
+				animation_group_index = AnimationType::JUMP_2_ANIMATION_TYPE;
 			}
 		}
 		if (input->move_down.is_down) {
@@ -630,7 +614,7 @@ internal Animation* EntityStateControl(PlaygroundState* playground_state,
 			entity->direction.x = -1.0f;
 			if (IsFlagSet(entity, EntityFlag::ON_GROUND_FLAG)) {
 				AddFlags(entity, EntityFlag::RUN_FLAG);
-				animation_index = 1;
+				animation_group_index = AnimationType::RUN_ANIMATION_TYPE;
 			}
 		}
 		if (input->move_right.is_down) {
@@ -638,7 +622,7 @@ internal Animation* EntityStateControl(PlaygroundState* playground_state,
 
 			if (IsFlagSet(entity, EntityFlag::ON_GROUND_FLAG)) {
 				AddFlags(entity, EntityFlag::RUN_FLAG);
-				animation_index = 1;
+				animation_group_index = AnimationType::RUN_ANIMATION_TYPE;
 			}
 		}
 
@@ -648,24 +632,41 @@ internal Animation* EntityStateControl(PlaygroundState* playground_state,
 				   EntityFlag::FALL_FLAG);
 	}
 	else if (entity->type == EntityType::FAMILIAR_TYPE) {
-		animation_index = 0;
 
 		Entity* player_entity = GetEntity(&playground_state->world, playground_state->world.player_entity_index);
 		if (IsFlagSet(player_entity, EntityFlag::RUN_FLAG)) {
-			animation_index = 1;
+			animation_group_index = AnimationType::RUN_ANIMATION_TYPE;
 		}
 	}
 
-	entity_animation = entity->animations + animation_index;
-	f32 seconds_per_frame = entity_animation->duration / (f32)entity_animation->frame_count;
-	entity_animation->total_elapsed_time += input->delta_time_for_frame;
+	ASSERT(animation_group_index > AnimationType::NULL_ANIMATION_TYPE);
+	ASSERT(animation_group_index < AnimationType::MAX_ANIMATION_TYPE);
+	entity_animation_group = entity->animation_groups[animation_group_index];
+	for (u32 animation_index = 0;
+		 animation_index < entity_animation_group->animation_count;
+		 ++animation_index) {
+		Animation* entity_animation = entity_animation_group->animations + animation_index;
+		f32 seconds_per_frame = entity_animation->duration / (f32)entity_animation->frame_count;
+		entity_animation->total_elapsed_time += input->delta_time_for_frame;
 
-	entity_animation->frame_index = (u32)(entity_animation->total_elapsed_time / seconds_per_frame);
+		entity_animation->frame_index = (u32)(entity_animation->total_elapsed_time / seconds_per_frame);
 	
-	if (entity_animation->total_elapsed_time > entity_animation->duration) {
-		entity_animation->total_elapsed_time = 0.0;
-		entity_animation->frame_index = 0;
+		if (entity_animation->total_elapsed_time > entity_animation->duration) {
+			entity_animation->total_elapsed_time = 0.0;
+			entity_animation->frame_index = 0;
+		}
 	}
+	
+	// entity_animation = entity->animations + animation_index;
+	// f32 seconds_per_frame = entity_animation->duration / (f32)entity_animation->frame_count;
+	// entity_animation->total_elapsed_time += input->delta_time_for_frame;
 
-	return entity_animation;
+	// entity_animation->frame_index = (u32)(entity_animation->total_elapsed_time / seconds_per_frame);
+	
+	// if (entity_animation->total_elapsed_time > entity_animation->duration) {
+	// 	entity_animation->total_elapsed_time = 0.0;
+	// 	entity_animation->frame_index = 0;
+	// }
+
+	return entity_animation_group;
 }

@@ -58,12 +58,12 @@ struct PlaygroundMemory
 	PlaygroundFreeFileCallback* PlaygroundFreeFile;
 };
 
+#define BITMAP_BYTES_PER_PIXEL 4
 struct PlaygroundDisplayBuffer
 {
 	void* memory;
 	i32 width;
 	i32 height;
-	i32 bytes_per_pixel;
 	i32 pitch;
 	i32 size;
 };

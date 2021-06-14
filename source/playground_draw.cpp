@@ -1,4 +1,4 @@
-internal void DrawRectangle(PlaygroundDisplayBuffer* display_buffer,
+internal void DrawRectangle(Bitmap* display_buffer,
 							f32 min_x, f32 min_y, f32 max_x, f32 max_y,
 							f32 r, f32 g, f32 b)
 {
@@ -28,7 +28,7 @@ internal void DrawRectangle(PlaygroundDisplayBuffer* display_buffer,
 				 (RoundF32ToU32(b * 255.0f) << 0));
 
 	u8* pixels = ((u8*)display_buffer->memory +
-				  rounded_min_x * display_buffer->bytes_per_pixel +
+				  rounded_min_x * BITMAP_BYTES_PER_PIXEL +
 				  rounded_min_y * display_buffer->pitch);
 
 	for (i32 y = rounded_min_y; y < rounded_max_y; ++y) {
@@ -77,7 +77,7 @@ internal void DrawRectangleWithBorder(PlaygroundDisplayBuffer* display_buffer,
 						(RoundF32ToU32(border_b * 255.0f) << 0));
 
 	u8* pixels = ((u8*)display_buffer->memory +
-				  rounded_min_x * display_buffer->bytes_per_pixel +
+				  rounded_min_x * BITMAP_BYTES_PER_PIXEL +
 				  rounded_min_y * display_buffer->pitch);
 
 	for (i32 y = rounded_min_y; y < rounded_max_y; ++y) {
@@ -130,9 +130,9 @@ struct BmpHeader
 };
 #pragma pack(pop)
 
-internal LoadedBmp LoadBmp(char* file_name, PlaygroundReadFileCallback* PlaygroundReadFile, i32 bitmap_align_x=0, i32 bitmap_align_y=0)
+internal Bitmap LoadBmp(char* file_name, PlaygroundReadFileCallback* PlaygroundReadFile, i32 bitmap_align_x=0, i32 bitmap_align_y=0)
 {
-	LoadedBmp loaded_bmp = {};
+	Bitmap loaded_bmp = {};
 	loaded_bmp.align_x = bitmap_align_x;
 	loaded_bmp.align_y = bitmap_align_y;
 	
@@ -140,7 +140,7 @@ internal LoadedBmp LoadBmp(char* file_name, PlaygroundReadFileCallback* Playgrou
 	if (bmp_file.size != 0) {
 		BmpHeader* bmp_header = (BmpHeader*)bmp_file.contents;
 
-		loaded_bmp.pixels = (u32*)((u8*)bmp_header + bmp_header->bitmap_offset);
+		loaded_bmp.memory = (u32*)((u8*)bmp_header + bmp_header->bitmap_offset);
 		loaded_bmp.width = bmp_header->width;
 		loaded_bmp.height = bmp_header->height;
 
@@ -161,7 +161,7 @@ internal LoadedBmp LoadBmp(char* file_name, PlaygroundReadFileCallback* Playgrou
 		u32 blue_rotate = 0 - blue_scan.index;
 		u32 alpha_rotate = 24 - alpha_scan.index;
 
-		u32* pixels = loaded_bmp.pixels;
+		u32* pixels = (u32*)loaded_bmp.memory;
 		for (i32 y = 0; y < bmp_header->height; ++y) {
 			for (i32 x = 0; x < bmp_header->width; ++x) {
 				u32 color = *pixels;
@@ -172,17 +172,22 @@ internal LoadedBmp LoadBmp(char* file_name, PlaygroundReadFileCallback* Playgrou
 			}
 		}
 	}
+
+	loaded_bmp.pitch = -loaded_bmp.width * BITMAP_BYTES_PER_PIXEL;
+	loaded_bmp.memory = (u8*)loaded_bmp.memory - loaded_bmp.pitch * (loaded_bmp.height - 1);
 	
 	return loaded_bmp;
 }
 
-internal LoadedBmp ScaleBmp(PlaygroundMemoryArena* arena,
-							LoadedBmp* bitmap, i32 new_width, i32 new_height)
+internal Bitmap ScaleBmp(PlaygroundMemoryArena* arena,
+						 Bitmap* bitmap, i32 new_width, i32 new_height)
 {
-	LoadedBmp scaled_bitmap;
-	scaled_bitmap.pixels = PushArray(arena, new_width * new_height, u32);
+	Bitmap scaled_bitmap;
+	scaled_bitmap.memory = (void*)PushArray(arena, new_width * new_height, u32);
 	scaled_bitmap.width = new_width;
 	scaled_bitmap.height = new_height;
+	scaled_bitmap.pitch = -scaled_bitmap.width * BITMAP_BYTES_PER_PIXEL;
+	scaled_bitmap.memory = (u8*)scaled_bitmap.memory - scaled_bitmap.pitch * (scaled_bitmap.height - 1);
 	
 	f32 x_ratio = (f32)(bitmap->width - 1) / (f32)new_width;
 	f32 y_ratio = (f32)(bitmap->height - 1) / (f32)new_height;
@@ -190,22 +195,24 @@ internal LoadedBmp ScaleBmp(PlaygroundMemoryArena* arena,
 	scaled_bitmap.align_x = (i32)(bitmap->align_x / x_ratio);
 	scaled_bitmap.align_y = (i32)(bitmap->align_y / y_ratio);
 
-	u32* bitmap_pixels = bitmap->pixels;
-	u32* scaled_bitmap_pixels = scaled_bitmap.pixels;
 	for (i32 y = 0; y < new_height; ++y) {
 		for (i32 x = 0; x < new_width; ++x) {
 			i32 scaled_x = FloorF32ToI32(x_ratio * x);
 			i32 scaled_y = FloorF32ToI32(y_ratio * y);
 
-			scaled_bitmap.pixels[y * new_width + x] = bitmap_pixels[scaled_y * bitmap->width + scaled_x];
+			u32* source_color = (u32*)((u8*)bitmap->memory + scaled_y * bitmap->pitch + scaled_x * BITMAP_BYTES_PER_PIXEL);
+			u32* destination_color = (u32*)((u8*)scaled_bitmap.memory + y * scaled_bitmap.pitch + x * BITMAP_BYTES_PER_PIXEL);
+			*destination_color = *source_color;
+
+			// scaled_bitmap_pixels[y * new_width + x] = bitmap_pixels[scaled_y * bitmap->width + scaled_x];
 		}
 	}
 
 	return scaled_bitmap;
 }
 
-internal void DrawBitmap(PlaygroundDisplayBuffer* display_buffer,
-						 LoadedBmp* bitmap,
+internal void DrawBitmap(Bitmap* display_buffer,
+						 Bitmap* bitmap,
 						 f32 x, f32 y,
 						 i32 align_x=0, i32 align_y=0,
 						 b32 flip_horizontally=false)
@@ -224,7 +231,9 @@ internal void DrawBitmap(PlaygroundDisplayBuffer* display_buffer,
 		rounded_min_x = 0;
 	}
 
+	i32 rounded_min_offset_y = 0;
 	if (rounded_min_y < 0) {
+		rounded_min_offset_y = -rounded_min_y;
 		rounded_min_y = 0;
 	}
 
@@ -236,19 +245,24 @@ internal void DrawBitmap(PlaygroundDisplayBuffer* display_buffer,
 		rounded_max_y = display_buffer->height;
 	}
 
-	u32* source_pixels = bitmap->pixels + (bitmap->width * (bitmap->height - 1));
-	if (flip_horizontally) {
-		source_pixels -= rounded_min_offset_x;
-	}
-	else {
-		source_pixels += rounded_min_offset_x;
-	}
+	rounded_min_offset_x = flip_horizontally ?
+		-rounded_min_offset_x : rounded_min_offset_x; 
+	
+	u8* source_pixels = (u8*)bitmap->memory +
+		bitmap->pitch * rounded_min_offset_y +
+		BITMAP_BYTES_PER_PIXEL * rounded_min_offset_x;
+	// if (flip_horizontally) {
+	// 	source_pixels -= BITMAP_BYTES_PER_PIXEL * rounded_min_offset_x;
+	// }
+	// else {
+	// 	source_pixels += BITMAP_BYTES_PER_PIXEL * rounded_min_offset_x;
+	// }
 	u8* destination_pixels = ((u8*)display_buffer->memory +
 							  rounded_min_y * display_buffer->pitch +
-							  rounded_min_x * display_buffer->bytes_per_pixel);
+							  rounded_min_x * BITMAP_BYTES_PER_PIXEL);
 	
 	for (i32 yy = rounded_min_y; yy < rounded_max_y; ++yy) {
-		u32* source_color = source_pixels;
+		u32* source_color = (u32*)source_pixels;
 		if (flip_horizontally) {
 			source_color += bitmap->width;
 		}
@@ -281,7 +295,7 @@ internal void DrawBitmap(PlaygroundDisplayBuffer* display_buffer,
 			}
 		}
 
-		source_pixels -= bitmap->width;
+		source_pixels += bitmap->pitch;
 		destination_pixels += display_buffer->pitch;
 	}
 }

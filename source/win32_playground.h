@@ -57,6 +57,9 @@ struct Win32MessageLoopInformation
 	Win32State state;
 	PlaygroundInput* old_playground_input;
 	PlaygroundInput* new_playground_input;
+	
+	Win32DisplayBuffer display_buffer;
+	WINDOWPLACEMENT window_position;
 };
 
 #define WIN32_PLAYGROUND_H

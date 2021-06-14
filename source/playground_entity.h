@@ -25,16 +25,6 @@ enum EntityFlag
 	ON_WALL_FLAG = (1 << 9),
 };
 
-struct LoadedBmp
-{
-	u32* pixels;
-	i32 width;
-	i32 height;
-
-	i32 align_x;
-	i32 align_y;
-};
-
 enum AnimationType
 {
 	NULL_ANIMATION_TYPE,
@@ -52,7 +42,7 @@ enum AnimationType
 
 struct AnimationFrame
 {
-	LoadedBmp* sprite;
+	Bitmap* sprite;
 
 	// TODO(SSJSR): Can we use entities for hitboxes?
 	u32 hitboxes[4];
@@ -65,10 +55,16 @@ struct Animation
 	f32 duration;
 	f32 total_elapsed_time;
 	
-	AnimationType type;
 	u32 frame_index;
 	u32 frame_count;
 	AnimationFrame frames[16];
+};
+
+struct AnimationGroup
+{
+	AnimationType group_type;
+	u32 animation_count;
+	Animation* animations;
 };
 
 struct Entity
@@ -91,10 +87,8 @@ struct Entity
 	u32 ball_index;
 	f32 distance_limit;
 
-	// u32 ticks;
-
-	u32 animation_count;
-	Animation animations[16];
+	u32 animation_group_count;
+	AnimationGroup* animation_groups[16];
 };
 
 struct MoveFeature
