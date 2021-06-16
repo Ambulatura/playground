@@ -208,8 +208,8 @@ inline b32 IsInRectangle2(Rectangle2 rect2, v2 point)
 inline Rectangle2 AddDimensionTo(Rectangle2 rect2, v2 dimension)
 {
 	Rectangle2 result;
-	result.min = rect2.min - dimension * 0.5f;
-	result.max = rect2.max + dimension * 0.5f;
+	result.min = rect2.min - dimension;
+	result.max = rect2.max + dimension;
 
 	return result;
 }
@@ -217,8 +217,8 @@ inline Rectangle2 AddDimensionTo(Rectangle2 rect2, v2 dimension)
 inline Rectangle2 SubtractDimensionTo(Rectangle2 rect2, v2 dimension)
 {
 	Rectangle2 result;
-	result.min = rect2.min + dimension * 0.5f;
-	result.max = rect2.max - dimension * 0.5f;
+	result.min = rect2.min + dimension;
+	result.max = rect2.max - dimension;
 
 	return result;
 }

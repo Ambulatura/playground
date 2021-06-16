@@ -1,11 +1,11 @@
 internal void DrawRectangle(Bitmap* display_buffer,
-							f32 min_x, f32 min_y, f32 max_x, f32 max_y,
+							v2 min, v2 max,
 							f32 r, f32 g, f32 b)
 {
-	i32 rounded_min_x = RoundF32ToI32(min_x);
-	i32 rounded_min_y = RoundF32ToI32(min_y);
-	i32 rounded_max_x = RoundF32ToI32(max_x);
-	i32 rounded_max_y = RoundF32ToI32(max_y);
+	i32 rounded_min_x = RoundF32ToI32(min.x);
+	i32 rounded_min_y = RoundF32ToI32(min.y);
+	i32 rounded_max_x = RoundF32ToI32(max.x);
+	i32 rounded_max_y = RoundF32ToI32(max.y);
 
 	if (rounded_min_x < 0) {
 		rounded_min_x = 0;
@@ -40,17 +40,17 @@ internal void DrawRectangle(Bitmap* display_buffer,
 	}
 }
 
-internal void DrawRectangleWithBorder(PlaygroundDisplayBuffer* display_buffer,
-									  f32 min_x, f32 min_y, f32 max_x, f32 max_y,
+internal void DrawRectangleWithBorder(Bitmap* display_buffer,
+									  v2 min, v2 max,
 									  f32 r, f32 g, f32 b,
 									  u8 border_width,
 									  f32 border_r, f32 border_g, f32 border_b,
 									  b32 only_border=false)
 {
-	i32 rounded_min_x = RoundF32ToI32(min_x);
-	i32 rounded_min_y = RoundF32ToI32(min_y);
-	i32 rounded_max_x = RoundF32ToI32(max_x);
-	i32 rounded_max_y = RoundF32ToI32(max_y);
+	i32 rounded_min_x = RoundF32ToI32(min.x);
+	i32 rounded_min_y = RoundF32ToI32(min.y);
+	i32 rounded_max_x = RoundF32ToI32(max.x);
+	i32 rounded_max_y = RoundF32ToI32(max.y);
 
 	if (rounded_min_x < 0) {
 		rounded_min_x = 0;
@@ -215,7 +215,8 @@ internal void DrawBitmap(Bitmap* display_buffer,
 						 Bitmap* bitmap,
 						 f32 x, f32 y,
 						 i32 align_x=0, i32 align_y=0,
-						 b32 flip_horizontally=false)
+						 b32 flip_horizontally=false,
+						 f32 alpha_coefficient=1.0f)
 {
 	x -= flip_horizontally ? bitmap->width - align_x : align_x;
 	y -= align_y;
@@ -272,6 +273,7 @@ internal void DrawBitmap(Bitmap* display_buffer,
 			f32 source_green = (f32)((*source_color >> 8) & 0xFF);
 			f32 source_blue = (f32)((*source_color >> 0) & 0xFF);
 			f32 source_alpha = (f32)((*source_color >> 24) & 0xFF);
+			source_alpha *= alpha_coefficient;
 			
 			f32 source_alpha_scaled = source_alpha / 255.0f;
 

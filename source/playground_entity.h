@@ -67,6 +67,20 @@ struct AnimationGroup
 	Animation* animations;
 };
 
+struct CollisionVolume
+{
+	v2 offset_position;
+	v2 dimension;
+};
+
+struct CollisionVolumeGroup
+{
+	CollisionVolume total_volume;
+
+	u32 volume_count;
+	CollisionVolume* volumes;
+};
+
 struct Entity
 {
 	EntityType type;
@@ -81,14 +95,16 @@ struct Entity
 	u32 facing_direction;
 	
 	TilePosition tile_position;
-	f32 width;
-	f32 height;
+	// f32 width;
+	// f32 height;
 
 	u32 ball_index;
 	f32 distance_limit;
 
 	u32 animation_group_count;
 	AnimationGroup* animation_groups[16];
+
+	CollisionVolumeGroup* collision_volume_group;
 };
 
 struct MoveFeature

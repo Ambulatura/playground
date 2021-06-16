@@ -83,7 +83,7 @@ struct PlaygroundState
 
 	AnimationGroup* familiar_idle_animations;
 	AnimationGroup* familiar_run_animations;
-
+	
 	Bitmap background;
 };
 

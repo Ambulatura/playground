@@ -479,8 +479,8 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 	draw_buffer.height = display_buffer->height;
 	draw_buffer.pitch = display_buffer->pitch;
 	DrawRectangle(&draw_buffer,
-				  0.0f, 0.0f,
-				  (f32)display_buffer->width, (f32)display_buffer->height,
+				  v2(),
+				  v2((f32)display_buffer->width, (f32)display_buffer->height),
 				  0.6f, 0.6f, 0.6f);
 	// DrawBitmap(&draw_buffer, &playground_state->background, 0, 0);
 
@@ -496,13 +496,12 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 			MoveFeature move_feature = {};
 
-			f32 entity_ground_point_x = playground_state->screen_center.x + world->meters_to_pixels * entity->position.x;
-			f32 entity_ground_point_y = playground_state->screen_center.y - world->meters_to_pixels * entity->position.y;
-
-			v2 entity_min = v2(entity_ground_point_x - (0.5f * world->meters_to_pixels * entity->width),
-							   entity_ground_point_y - (0.5f * world->meters_to_pixels * entity->height));
-			v2 entity_max = v2(entity_min.x + entity->width * world->meters_to_pixels,
-							   entity_min.y + entity->height * world->meters_to_pixels);
+			v2 entity_position = GetEntityAlignedPosition(entity);
+			v2 dimension = GetEntityDimension(entity);
+			v2 half_dimension = 0.5f * dimension * world->meters_to_pixels;
+			
+			v2 entity_center = v2(playground_state->screen_center.x + world->meters_to_pixels * entity_position.x,
+								  playground_state->screen_center.y - world->meters_to_pixels * entity_position.y);
 
 			if (entity->type == EntityType::PLAYER_TYPE) {
 				AnimationGroup* entity_animation_group = EntityStateControl(playground_state, entity, input);
@@ -521,13 +520,13 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 													 entity->ball_index,
 													 v2(direction_x, 0.0f),
 													 v2(entity->position.x + 1.0f * direction_x,
-														entity->position.y + entity->height * 0.14f),
+														entity->position.y + dimension.y * 0.14f),
 													 v2(15.0f * direction_x, 0.0f));
 				}
 
-				DrawRectangleWithBorder(display_buffer,
-										entity_min.x, entity_min.y,
-										entity_max.x, entity_max.y,
+				DrawRectangleWithBorder(&draw_buffer,
+										entity_center - half_dimension,
+										entity_center + half_dimension,
 										1.0f, 0.4f, 0.2f,
 										1,
 										0.7f, 0.3f, 0.5f,
@@ -541,21 +540,11 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 							true : false;
 
 						DrawBitmap(&draw_buffer, sprite,
-								   entity_ground_point_x, entity_ground_point_y,
+								   entity_center.x, entity_center.y,
 								   sprite->align_x, sprite->align_y,
 								   flip_horizontally);
 					}
 				}
-				
-				// Bitmap* sprite = entity_animation->frames[entity_animation->frame_index].sprite;
-
-				// b32 flip_horizontally = entity->facing_direction == 1 ?
-				// 	true : false;
-
-				// DrawBitmap(display_buffer, sprite,
-				// 		   entity_ground_point_x, entity_ground_point_y,
-				// 		   sprite->align_x, sprite->align_y,
-				// 		   flip_horizontally);
 			}
 			else if (entity->type == EntityType::FAMILIAR_TYPE) {
 				Entity* player_entity = GetEntity(world, world->player_entity_index);
@@ -583,21 +572,11 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 							true : false;
 
 						DrawBitmap(&draw_buffer, sprite,
-								   entity_ground_point_x, entity_ground_point_y,
+								   entity_center.x, entity_center.y,
 								   sprite->align_x, sprite->align_y,
 								   flip_horizontally);
 					}
 				}
-
-				// Bitmap* sprite = entity_animation->frames[entity_animation->frame_index].sprite;
-
-				// b32 flip_horizontally = player_entity->facing_direction == 1 ?
-				// 	true : false;
-
-				// DrawBitmap(display_buffer, sprite,
-				// 		   entity_ground_point_x, entity_ground_point_y,
-				// 		   sprite->align_x, sprite->align_y,
-				// 		   flip_horizontally);
 			}
 			else if (entity->type == EntityType::BALL_TYPE) {
 				// move_feature.direction = entity->direction;
@@ -612,8 +591,8 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				}
 
 				DrawRectangle(&draw_buffer,
-							  entity_min.x, entity_min.y,
-							  entity_max.x, entity_max.y,
+							  entity_center - half_dimension,
+							  entity_center + half_dimension,
 							  0.0f, 0.0f, 0.0f);
 			}
 			else if (entity->type == EntityType::MONSTER_TYPE) {
@@ -635,41 +614,41 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				move_feature.friction_coefficient = 8.0f;
 				move_feature.max_unit_vector_length = true;
 
-				DrawRectangleWithBorder(display_buffer,
-										entity_min.x, entity_min.y,
-										entity_max.x, entity_max.y,
+				DrawRectangleWithBorder(&draw_buffer,
+										entity_center - half_dimension,
+										entity_center + half_dimension,
 										1.0f, 0.5f, 0.0f,
 										5,
 										1.0f, 0.5f, 0.0f,
 										true);
 			}
 			else {
-				// DrawRectangle(display_buffer,
-				// 			  entity_min.x, entity_min.y,
-				// 			  entity_max.x, entity_max.y,
+				DrawRectangle(&draw_buffer,
+							  entity_center - half_dimension,
+							  entity_center + half_dimension,
+							  0.18f, 0.18f, 0.18f);
+
+				// f32 thickness = world->meters_to_pixels * 0.1f;
+
+				// DrawRectangle(&draw_buffer,
+				// 			  entity_min.x, entity_min.y - thickness * 0.5f,
+				// 			  entity_max.x, entity_min.y + thickness * 0.5f,
 				// 			  0.18f, 0.18f, 0.18f);
 
-				f32 thickness = world->meters_to_pixels * 0.1f;
+				// DrawRectangle(&draw_buffer,
+				// 			  entity_min.x, entity_max.y - thickness * 0.5f,
+				// 			  entity_max.x, entity_max.y + thickness * 0.5f,
+				// 			  0.18f, 0.18f, 0.18f);
 
-				DrawRectangle(&draw_buffer,
-							  entity_min.x, entity_min.y - thickness * 0.5f,
-							  entity_max.x, entity_min.y + thickness * 0.5f,
-							  0.18f, 0.18f, 0.18f);
+				// DrawRectangle(&draw_buffer,
+				// 			  entity_min.x - thickness * 0.5f, entity_min.y,
+				// 			  entity_min.x + thickness * 0.5f, entity_max.y,
+				// 			  0.18f, 0.18f, 0.18f);
 
-				DrawRectangle(&draw_buffer,
-							  entity_min.x, entity_max.y - thickness * 0.5f,
-							  entity_max.x, entity_max.y + thickness * 0.5f,
-							  0.18f, 0.18f, 0.18f);
-
-				DrawRectangle(&draw_buffer,
-							  entity_min.x - thickness * 0.5f, entity_min.y,
-							  entity_min.x + thickness * 0.5f, entity_max.y,
-							  0.18f, 0.18f, 0.18f);
-
-				DrawRectangle(&draw_buffer,
-							  entity_max.x - thickness * 0.5f, entity_min.y,
-							  entity_max.x + thickness * 0.5f, entity_max.y,
-							  0.18f, 0.18f, 0.18f);
+				// DrawRectangle(&draw_buffer,
+				// 			  entity_max.x - thickness * 0.5f, entity_min.y,
+				// 			  entity_max.x + thickness * 0.5f, entity_max.y,
+				// 			  0.18f, 0.18f, 0.18f);
 			}
 
 			if (IsFlagSet(entity, EntityFlag::MOVEABLE_FLAG) &&
@@ -750,9 +729,9 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 	// 		f32 max_x = min_x + world->tile_side_in_pixels;
 	// 		f32 max_y = min_y + world->tile_side_in_pixels;
 
-	// 		DrawRectangleWithBorder(display_buffer,
-	// 								min_x, min_y,
-	// 								max_x, max_y,
+	// 		DrawRectangleWithBorder(&draw_buffer,
+	// 								v2(min_x, min_y),
+	// 								v2(max_x, max_y),
 	// 								1.0f, 0.5f, 0.0f,
 	// 								1,
 	// 								0.7f, 0.7f, 0.7f,
