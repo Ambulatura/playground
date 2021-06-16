@@ -722,7 +722,7 @@ internal AnimationGroup* EntityStateControl(PlaygroundState* playground_state,
 
 		entity_animation->frame_index = (u32)(entity_animation->total_elapsed_time / seconds_per_frame);
 	
-		if (entity_animation->total_elapsed_time > entity_animation->duration) {
+		if (entity_animation->total_elapsed_time >= entity_animation->duration) {
 			entity_animation->total_elapsed_time = 0.0;
 			entity_animation->frame_index = 0;
 		}

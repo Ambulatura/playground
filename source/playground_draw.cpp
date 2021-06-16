@@ -165,10 +165,26 @@ internal Bitmap LoadBmp(char* file_name, PlaygroundReadFileCallback* PlaygroundR
 		for (i32 y = 0; y < bmp_header->height; ++y) {
 			for (i32 x = 0; x < bmp_header->width; ++x) {
 				u32 color = *pixels;
-				*pixels++ = (BitsRotateLeft(color & bmp_header->red_mask, red_rotate) |
-							 BitsRotateLeft(color & bmp_header->green_mask, green_rotate) |
-							 BitsRotateLeft(color & bmp_header->blue_mask, blue_rotate) |
-							 BitsRotateLeft(color & bmp_header->alpha_mask, alpha_rotate));
+
+				f32 r = (f32)(((color & bmp_header->red_mask) >> red_scan.index));
+				f32 g = (f32)(((color & bmp_header->green_mask) >> green_scan.index));
+				f32 b = (f32)(((color & bmp_header->blue_mask) >> blue_scan.index));
+				f32 a = (f32)(((color & bmp_header->alpha_mask) >> alpha_scan.index));
+				f32 a_normalized = a / 255.0f;
+
+				r *= a_normalized;
+				g *= a_normalized;
+				b *= a_normalized;
+				
+				// *pixels++ = (BitsRotateLeft(color & bmp_header->red_mask, red_rotate) |
+				// 			 BitsRotateLeft(color & bmp_header->green_mask, green_rotate) |
+				// 			 BitsRotateLeft(color & bmp_header->blue_mask, blue_rotate) |
+				// 			 BitsRotateLeft(color & bmp_header->alpha_mask, alpha_rotate));
+
+				*pixels++ = (((u32)(a + 0.5f) << 24) |
+							 ((u32)(r + 0.5f) << 16) |
+							 ((u32)(g + 0.5f) << 8) |
+							 ((u32)(b + 0.5f) << 0));
 			}
 		}
 	}
@@ -269,23 +285,31 @@ internal void DrawBitmap(Bitmap* display_buffer,
 		}
 		u32* destination_color = (u32*)destination_pixels;
 		for (i32 xx = rounded_min_x; xx < rounded_max_x; ++xx) {
-			f32 source_red = (f32)((*source_color >> 16) & 0xFF);
-			f32 source_green = (f32)((*source_color >> 8) & 0xFF);
-			f32 source_blue = (f32)((*source_color >> 0) & 0xFF);
 			f32 source_alpha = (f32)((*source_color >> 24) & 0xFF);
-			source_alpha *= alpha_coefficient;
+			f32 source_alpha_normalized = (source_alpha / 255.0f) * alpha_coefficient;
 			
-			f32 source_alpha_scaled = source_alpha / 255.0f;
+			f32 source_red = alpha_coefficient * (f32)((*source_color >> 16) & 0xFF);
+			f32 source_green = alpha_coefficient * (f32)((*source_color >> 8) & 0xFF);
+			f32 source_blue = alpha_coefficient * (f32)((*source_color >> 0) & 0xFF);
 
 			f32 destination_red = (f32)((*destination_color >> 16) & 0xFF);
 			f32 destination_green = (f32)((*destination_color >> 8) & 0xFF);
 			f32 destination_blue = (f32)((*destination_color >> 0) & 0xFF);
+			f32 destination_alpha = (f32)((*destination_color >> 24) & 0xFF);
 
-			f32 red = (1.0f - source_alpha_scaled) * destination_red + source_red * source_alpha_scaled;
-			f32 green = (1.0f - source_alpha_scaled) * destination_green + source_green * source_alpha_scaled;
-			f32 blue = (1.0f - source_alpha_scaled) * destination_blue + source_blue * source_alpha_scaled;
+			f32 destination_alpha_normalized = destination_alpha / 255.0f;
+
+			// f32 red = (1.0f - source_alpha_normalized) * destination_red + source_red * source_alpha_normalized;
+			// f32 green = (1.0f - source_alpha_normalized) * destination_green + source_green * source_alpha_normalized;
+			// f32 blue = (1.0f - source_alpha_normalized) * destination_blue + source_blue * source_alpha_normalized;
+
+			f32 alpha = 255.0f * (source_alpha_normalized + destination_alpha_normalized - (source_alpha_normalized * destination_alpha_normalized));
+			f32 red = (1.0f - source_alpha_normalized) * destination_red + source_red;
+			f32 green = (1.0f - source_alpha_normalized) * destination_green + source_green;
+			f32 blue = (1.0f - source_alpha_normalized) * destination_blue + source_blue;
 			
-			*destination_color++ = (((u32)(red + 0.5f) << 16) |
+			*destination_color++ = (((u32)(alpha + 0.5f) << 24) |
+									((u32)(red + 0.5f) << 16) |
 									((u32)(green + 0.5f) << 8) |
 									((u32)(blue + 0.5f) << 0));
 
