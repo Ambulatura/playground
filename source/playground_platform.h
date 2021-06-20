@@ -28,7 +28,7 @@ typedef i32 b32;
 
 #define ASSERT(x) if (!(x)) { *(int*)0 = 0; }
 #define ARRAY_COUNT(array) (sizeof(array) / sizeof((array)[0]))
-#define SWAP(a, b, t) do { t temp = a; a = b; b = temp; } while (0)
+#define SWAP(a, b, t) do { t temp = (a); a = (b); b = (temp); } while (0)
 #define MINIMUM(a, b) ((a) < (b) ? (a) : (b))
 #define MAXIMUM(a, b) ((a) > (b) ? (a) : (b))
 

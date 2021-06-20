@@ -17,32 +17,13 @@ struct PlaygroundState
 
 	// NOTE(SSJSR): Player sprites.
 	// TODO(SSJSR): Probably we need sprite group struct or something different?
-	Bitmap player_idle_00;
-	Bitmap player_idle_01;
-	Bitmap player_idle_02;
-	Bitmap player_idle_03;
-
-	Bitmap player_run_00;
-	Bitmap player_run_01;
-	Bitmap player_run_02;
-	Bitmap player_run_03;
-	Bitmap player_run_04;
-	Bitmap player_run_05;
-
-	Bitmap player_jump_02;
-	Bitmap player_jump_03;
-
-	Bitmap player_jump_2_00;
-	Bitmap player_jump_2_01;
-	Bitmap player_jump_2_02;
-	Bitmap player_jump_2_03;
-
-	Bitmap player_fall_00;
-	Bitmap player_fall_01;
-
-	Bitmap player_wall_slide_00;
-	Bitmap player_wall_slide_01;
-
+	Bitmap player_idle[4];
+	Bitmap player_run[6];
+	Bitmap player_jump[2];
+	Bitmap player_jump_2[4];
+	Bitmap player_fall[2];
+	Bitmap player_wall_slide[2];
+	
 	AnimationGroup* player_idle_animations;
 	AnimationGroup* player_run_animations;
 	AnimationGroup* player_jump_animations;
@@ -62,30 +43,22 @@ struct PlaygroundState
 	// LoadedBmp fireball_04;
 
 	// NOTE(SSJSR): Familiar sprites.
-	Bitmap familiar_idle_00;
-	Bitmap familiar_idle_01;
-	Bitmap familiar_idle_02;
-	Bitmap familiar_idle_03;
-
-	Bitmap familiar_run_00;
-	Bitmap familiar_run_01;
-	Bitmap familiar_run_02;
-	Bitmap familiar_run_03;
-	Bitmap familiar_run_04;
-	Bitmap familiar_run_05;
-
-	Bitmap familiar_run_dust_00;
-	Bitmap familiar_run_dust_01;
-	Bitmap familiar_run_dust_02;
-	Bitmap familiar_run_dust_03;
-	Bitmap familiar_run_dust_04;
-	Bitmap familiar_run_dust_05;
+	Bitmap familiar_idle[4];
+	Bitmap familiar_run[6];
+	Bitmap familiar_run_dust[6];
 
 	AnimationGroup* familiar_idle_animations;
 	AnimationGroup* familiar_run_animations;
 	
 	Bitmap background;
 };
+
+// struct TransientState
+// {
+// 	PlaygroundMemoryArena transient_arena;
+
+// 	b32 is_initialized;
+// };
 
 #define PLAYGROUND_H
 #endif

@@ -49,7 +49,7 @@ internal CollisionVolumeGroup* MakeCollisionVolumeGroup(PlaygroundMemoryArena* a
 }
 
 inline Entity* GetEntity(World* world, u32 entity_index);
-internal void UpdateEntityTileMapAndTilePosition(World* world, Entity* entity, u32 entity_index, TilePosition* new_tile_position);
+internal void UpdateEntityTileMapAndTilePosition(PlaygroundState* playground_state, World* world, Entity* entity, u32 entity_index, TilePosition* new_tile_position);
 
 inline void AddFlags(Entity* entity, u32 flags)
 {
@@ -74,11 +74,11 @@ inline void MakeEntityNonspatial(Entity* entity)
 	entity->position = InvalidPosition();
 }
 
-inline void MakeEntityNonspatialAndDeleteFromTileMap(World* world, Entity* entity, u32 entity_index)
+inline void MakeEntityNonspatialAndDeleteFromTileMap(PlaygroundState* playground_state, World* world, Entity* entity, u32 entity_index)
 {
 	TilePosition invalid_tile_position = InvalidTilePosition();
 	MakeEntityNonspatial(entity);
-	UpdateEntityTileMapAndTilePosition(world, entity, entity_index, &invalid_tile_position);
+	UpdateEntityTileMapAndTilePosition(playground_state, world, entity, entity_index, &invalid_tile_position);
 	entity->tile_position = invalid_tile_position;
 }
 
@@ -90,12 +90,12 @@ inline void MakeEntitySpatial(Entity* entity, v2 direction, v2 position, v2 velo
 	entity->velocity = velocity;
 }
 
-inline void MakeEntitySpatialAndAddToTileMap(World* world, Entity* entity, u32 entity_index, v2 direction, v2 position, v2 velocity)
+inline void MakeEntitySpatialAndAddToTileMap(PlaygroundState* playground_state, World* world, Entity* entity, u32 entity_index, v2 direction, v2 position, v2 velocity)
 {
 	MakeEntitySpatial(entity, direction, position, velocity);
 
 	TilePosition new_tile_position = MapIntoTilePosition(world->camera, entity->position, world->tile_side_in_meters);
-	UpdateEntityTileMapAndTilePosition(world, entity, entity_index, &new_tile_position);
+	UpdateEntityTileMapAndTilePosition(playground_state, world, entity, entity_index, &new_tile_position);
 
 }
 
@@ -136,7 +136,7 @@ internal void SetCameraLocationAndUpdateEntities(World* world, TilePosition new_
 {
 	world->active_entity_count = 0;
 
-	f32 max_entity_dimension = (f32)world->tile_count_x + 
+	f32 max_entity_dimension = // (f32)world->tile_count_x +
 		10.0f;
 	f32 max_entity_velocity = 30.0f;
 	f32 max_bound = max_entity_dimension + max_entity_velocity * delta_time;
@@ -167,6 +167,8 @@ internal void SetCameraLocationAndUpdateEntities(World* world, TilePosition new_
 					if (!IsFlagSet(entity, EntityFlag::NONSPATIAL_FLAG)) {
 						v2 new_position = TilePositionDifference(entity->tile_position, world->camera, world->tile_side_in_meters);
 						if (IsEntityNewPositionInRectangle2(entity, camera_bounds, new_position)) {
+							ASSERT(world->active_entity_count < ARRAY_COUNT(world->active_entity_indices) - 1);
+							
 							entity->position = new_position;
 							world->active_entity_indices[world->active_entity_count++] = entity_index;
 							entity->updatable = IsInRectangle2(updatable_bounds, entity->position);
@@ -178,7 +180,7 @@ internal void SetCameraLocationAndUpdateEntities(World* world, TilePosition new_
 	}
 }
 
-internal void UpdateEntityTileMapAndTilePosition(World* world, Entity* entity, u32 entity_index, TilePosition* new_tile_position)
+internal void UpdateEntityTileMapAndTilePosition(PlaygroundState* playground_state, World* world, Entity* entity, u32 entity_index, TilePosition* new_tile_position)
 {
 	TilePosition* old_tile_position = &entity->tile_position;
 
@@ -239,7 +241,7 @@ internal void UpdateEntityTileMapAndTilePosition(World* world, Entity* entity, u
 						world->first_free_entity_block = world->first_free_entity_block->next_entity_block;
 					}
 					else {
-						first_entity_block = PushStruct(world->world_arena, EntityBlock);
+						first_entity_block = PushStruct(&playground_state->arena, EntityBlock);
 					}
 
 					first_entity_block->next_entity_block = new_tile_map->first_entity_block;
@@ -276,7 +278,117 @@ inline b32 TestWall(f32 wall_x,
 	return hit;
 }
 
-internal void MoveEntity(World* world, u32 entity_index, Entity* entity, f32 delta_time_for_frame, MoveFeature* move_feature)
+internal void AddCollisionPair(PlaygroundMemoryArena* arena, World* world,
+							   u32 first_entity_index, u32 second_entity_index,
+							   b32 can_collide)
+{
+	if (first_entity_index != second_entity_index) {
+		if (first_entity_index > second_entity_index) {
+			SWAP(first_entity_index, second_entity_index, u32);
+		}
+
+		u32 hash_index = first_entity_index & (ARRAY_COUNT(world->collision_pair_hash) - 1);
+		CollisionPair* found = 0;
+		for (CollisionPair* collision_pair = world->collision_pair_hash[hash_index];
+			 collision_pair;
+			 collision_pair = collision_pair->next_collision_pair) {
+			if (collision_pair->first_entity_index == first_entity_index &&
+				collision_pair->second_entity_index == second_entity_index) {
+				found = collision_pair;
+				break;
+			}
+		}
+
+		if (!found) {
+			found = world->first_free_collision_pair;
+			if (!found) {
+				found = PushStruct(arena, CollisionPair);
+			}
+			else {
+				world->first_free_collision_pair = found->next_collision_pair;
+			}
+
+			found->next_collision_pair = world->collision_pair_hash[hash_index];
+			world->collision_pair_hash[hash_index] = found;
+		}
+		
+		if (found) {
+			found->first_entity_index = first_entity_index;
+			found->second_entity_index = second_entity_index;
+			found->can_collide = can_collide;
+		}
+	}
+}
+
+internal b32 CanCollide(World* world,
+						Entity* first_entity, u32 first_entity_index,
+						Entity* second_entity, u32 second_entity_index)
+{
+	b32 result = false;
+
+	if (first_entity_index != second_entity_index) {
+
+		if (first_entity_index > second_entity_index) {
+			SWAP(first_entity_index, second_entity_index, u32);
+		}
+
+		if (!IsFlagSet(first_entity, EntityFlag::NONSPATIAL_FLAG) &&
+			!IsFlagSet(second_entity, EntityFlag::NONSPATIAL_FLAG)) {
+			result = true;
+		}
+	
+		u32 hash_index = first_entity_index & (ARRAY_COUNT(world->collision_pair_hash) - 1);
+		ASSERT(hash_index < ARRAY_COUNT(world->collision_pair_hash));
+		for (CollisionPair* collision_pair = world->collision_pair_hash[hash_index];
+			 collision_pair;
+			 collision_pair = collision_pair->next_collision_pair) {
+			if (collision_pair->first_entity_index == first_entity_index &&
+				collision_pair->second_entity_index == second_entity_index) {
+				result = collision_pair->can_collide;
+				break;
+			}
+		}
+	}
+
+	return result;
+}
+
+internal b32 StopsOnCollision(PlaygroundMemoryArena* arena, World* world,
+							  Entity* first_entity, u32 first_entity_index,
+							  Entity* second_entity, u32 second_entity_index) {
+	
+	b32 result = true;
+
+	if (first_entity_index != second_entity_index) {
+		
+		if (first_entity->type > second_entity->type) {
+			SWAP(first_entity_index, second_entity_index, u32);
+			SWAP(first_entity, second_entity, Entity*);
+		}
+
+		if (first_entity->type == EntityType::FAMILIAR_TYPE ||
+			second_entity->type == EntityType::FAMILIAR_TYPE) {
+			result = false;2
+			AddCollisionPair(arena, world, first_entity_index, second_entity_index, result);
+		}
+				
+		if (first_entity->type == EntityType::BALL_TYPE ||
+			second_entity->type == EntityType::BALL_TYPE) {
+			result = false;
+			AddCollisionPair(arena, world, first_entity_index, second_entity_index, result);
+		}
+
+		if (first_entity->type == EntityType::PLAYER_TYPE &&
+			second_entity->type == EntityType::MONSTER_TYPE) {
+			result = false;
+			AddCollisionPair(arena, world, first_entity_index, second_entity_index, result);
+		}
+	}
+
+	return result;
+}
+
+internal void MoveEntity(PlaygroundState* playground_state, World* world, u32 entity_index, Entity* entity, f32 delta_time_for_frame, MoveFeature* move_feature)
 {
 	v2 direction = move_feature->direction;
 
@@ -321,89 +433,90 @@ internal void MoveEntity(World* world, u32 entity_index, Entity* entity, f32 del
 				time_minimum = distance_remaining / entity_position_delta_length;
 			}
 
-			b32 hit = false;
+			Entity* hit_entity = 0;
+			u32 hit_entity_index = 0;
 			v2 wall_normal = v2(0.0f, 0.0f);
 
 			v2 target_position = entity->position + entity_position_delta;
 
-			// for (u32 test_entity_index = 1;
-			// 	 test_entity_index < world->entity_count;
-			// 	 ++test_entity_index) {
 			for (u32 test_entity_index_index = 0;
 				 test_entity_index_index < world->active_entity_count;
 				 ++test_entity_index_index) {
 
 				u32 test_entity_index = world->active_entity_indices[test_entity_index_index];
 
-				if (IsFlagSet(entity, EntityFlag::COLLIDES_FLAG) && !IsFlagSet(entity, EntityFlag::NONSPATIAL_FLAG)) {
-					if (test_entity_index != entity_index) {
-						Entity* test_entity = GetEntity(world, test_entity_index);
+				// if (IsFlagSet(entity, EntityFlag::COLLIDES_FLAG) && !IsFlagSet(entity, EntityFlag::NONSPATIAL_FLAG)) {
+				// 	if (test_entity_index != entity_index) {
+				Entity* test_entity = GetEntity(world, test_entity_index);
+				if (CanCollide(world, entity, entity_index, test_entity, test_entity_index)) {
 
-						if (IsFlagSet(test_entity, EntityFlag::COLLIDES_FLAG) && !IsFlagSet(test_entity, EntityFlag::NONSPATIAL_FLAG)) {
+					// if (IsFlagSet(test_entity, EntityFlag::COLLIDES_FLAG) && !IsFlagSet(test_entity, EntityFlag::NONSPATIAL_FLAG)) {
 							
-							for (u32 volume_group_index = 0;
-								 volume_group_index < entity->collision_volume_group->volume_count;
-								 ++volume_group_index) {
-								CollisionVolume* collision_volume = entity->collision_volume_group->volumes + volume_group_index;
+					for (u32 volume_group_index = 0;
+						 volume_group_index < entity->collision_volume_group->volume_count;
+						 ++volume_group_index) {
+						CollisionVolume* collision_volume = entity->collision_volume_group->volumes + volume_group_index;
 								
-								for (u32 test_volume_group_index = 0;
-									 test_volume_group_index < test_entity->collision_volume_group->volume_count;
-									 ++test_volume_group_index) {
-									CollisionVolume* test_collision_volume = test_entity->collision_volume_group->volumes + test_volume_group_index;
+						for (u32 test_volume_group_index = 0;
+							 test_volume_group_index < test_entity->collision_volume_group->volume_count;
+							 ++test_volume_group_index) {
+							CollisionVolume* test_collision_volume = test_entity->collision_volume_group->volumes + test_volume_group_index;
 
-									v2 diameter = collision_volume->dimension + test_collision_volume->dimension;
+							v2 diameter = collision_volume->dimension + test_collision_volume->dimension;
 
-									v2 wall_min_corner = -0.5f * diameter;
-									v2 wall_max_corner = 0.5f * diameter;
+							v2 wall_min_corner = -0.5f * diameter;
+							v2 wall_max_corner = 0.5f * diameter;
 							
-									v2 tile_relative_position = ((entity->position + collision_volume->offset_position) -
-																 (test_entity->position + test_collision_volume->offset_position));
+							v2 tile_relative_position = ((entity->position + collision_volume->offset_position) -
+														 (test_entity->position + test_collision_volume->offset_position));
 
-									if (TestWall(wall_min_corner.x,
-												 tile_relative_position.x, tile_relative_position.y,
-												 wall_min_corner.y, wall_max_corner.y,
-												 entity_position_delta.x,
-												 entity_position_delta.y,
-												 &time_minimum)) {
-										wall_normal = v2(-1.0f, 0.0f);
-										entity->velocity.y *= 0.7f;
-										hit = true;
-										AddFlags(entity, EntityFlag::ON_WALL_FLAG);
-									}
+							if (TestWall(wall_min_corner.x,
+										 tile_relative_position.x, tile_relative_position.y,
+										 wall_min_corner.y, wall_max_corner.y,
+										 entity_position_delta.x,
+										 entity_position_delta.y,
+										 &time_minimum)) {
+								wall_normal = v2(-1.0f, 0.0f);
+								entity->velocity.y *= 0.7f;
+								hit_entity = test_entity;
+								hit_entity_index = test_entity_index;
+								AddFlags(entity, EntityFlag::ON_WALL_FLAG);
+							}
 
-									if (TestWall(wall_max_corner.x,
-												 tile_relative_position.x, tile_relative_position.y,
-												 wall_min_corner.y, wall_max_corner.y,
-												 entity_position_delta.x,
-												 entity_position_delta.y,
-												 &time_minimum)) {
-										wall_normal = v2(1.0f, 0.0f);
-										entity->velocity.y *= 0.7f;
-										hit = true;
-										AddFlags(entity, EntityFlag::ON_WALL_FLAG);
-									}
+							if (TestWall(wall_max_corner.x,
+										 tile_relative_position.x, tile_relative_position.y,
+										 wall_min_corner.y, wall_max_corner.y,
+										 entity_position_delta.x,
+										 entity_position_delta.y,
+										 &time_minimum)) {
+								wall_normal = v2(1.0f, 0.0f);
+								entity->velocity.y *= 0.7f;
+								hit_entity = test_entity;
+								hit_entity_index = test_entity_index;
+								AddFlags(entity, EntityFlag::ON_WALL_FLAG);
+							}
 
-									if (TestWall(wall_min_corner.y,
-												 tile_relative_position.y, tile_relative_position.x,
-												 wall_min_corner.x, wall_max_corner.x,
-												 entity_position_delta.y,
-												 entity_position_delta.x,
-												 &time_minimum)) {
-										wall_normal = v2(0.0f, -1.0f);
-										hit = true;
-									}
+							if (TestWall(wall_min_corner.y,
+										 tile_relative_position.y, tile_relative_position.x,
+										 wall_min_corner.x, wall_max_corner.x,
+										 entity_position_delta.y,
+										 entity_position_delta.x,
+										 &time_minimum)) {
+								wall_normal = v2(0.0f, -1.0f);
+								hit_entity = test_entity;
+								hit_entity_index = test_entity_index;
+							}
 
-									if (TestWall(wall_max_corner.y,
-												 tile_relative_position.y, tile_relative_position.x,
-												 wall_min_corner.x, wall_max_corner.x,
-												 entity_position_delta.y,
-												 entity_position_delta.x,
-												 &time_minimum)) {
-										wall_normal = v2(0.0f, 1.0f);
-										hit = true;
-										AddFlags(entity, EntityFlag::ON_GROUND_FLAG);
-									}
-								}
+							if (TestWall(wall_max_corner.y,
+										 tile_relative_position.y, tile_relative_position.x,
+										 wall_min_corner.x, wall_max_corner.x,
+										 entity_position_delta.y,
+										 entity_position_delta.x,
+										 &time_minimum)) {
+								wall_normal = v2(0.0f, 1.0f);
+								hit_entity = test_entity;
+								hit_entity_index = test_entity_index;
+								AddFlags(entity, EntityFlag::ON_GROUND_FLAG);
 							}
 						}
 					}
@@ -412,10 +525,14 @@ internal void MoveEntity(World* world, u32 entity_index, Entity* entity, f32 del
 			
 			entity->position = (entity_position_delta * time_minimum) + entity->position;
 			distance_remaining -= entity_position_delta_length * time_minimum;
-			if (hit) {
-				entity->velocity = entity->velocity - 1.0f * Dot(entity->velocity, wall_normal) * wall_normal;
+			if (hit_entity) {
 				entity_position_delta = target_position - entity->position;
-				entity_position_delta = entity_position_delta - 1.0f * Dot(entity_position_delta, wall_normal) * wall_normal;
+
+				b32 stops_on_collision = StopsOnCollision(&playground_state->arena, world, entity, entity_index, hit_entity, hit_entity_index);
+				if (stops_on_collision) {
+					entity->velocity = entity->velocity - 1.0f * Dot(entity->velocity, wall_normal) * wall_normal;
+					entity_position_delta = entity_position_delta - 1.0f * Dot(entity_position_delta, wall_normal) * wall_normal;
+				}
 
 				hitted = true;
 
@@ -433,9 +550,9 @@ internal void MoveEntity(World* world, u32 entity_index, Entity* entity, f32 del
 		entity->distance_limit = distance_remaining;
 	}
 
-	if (hitted && entity->type == EntityType::BALL_TYPE) {
-		MakeEntityNonspatialAndDeleteFromTileMap(world, entity, entity_index);
-	}
+	// if (hitted && entity->type == EntityType::BALL_TYPE) {
+	// 	MakeEntityNonspatialAndDeleteFromTileMap(playground_state, world, entity, entity_index);
+	// }
 
 	// if (entity->velocity.x < 0.0f) {
 	// 	entity->facing_direction = 1; // Left
@@ -456,7 +573,7 @@ internal void MoveEntity(World* world, u32 entity_index, Entity* entity, f32 del
 	}
 }
 
-internal u32 AddEntity(World* world, EntityType type, TilePosition* tile_position)
+internal u32 AddEntity(PlaygroundState* playground_state, World* world, EntityType type, TilePosition* tile_position)
 {
 	ASSERT(world->entity_count < ARRAY_COUNT(world->entities));
 
@@ -468,7 +585,7 @@ internal u32 AddEntity(World* world, EntityType type, TilePosition* tile_positio
 	entity->tile_position = InvalidTilePosition();
 
 	if (tile_position) {
-		UpdateEntityTileMapAndTilePosition(world, entity, entity_index, tile_position);
+		UpdateEntityTileMapAndTilePosition(playground_state, world, entity, entity_index, tile_position);
 	}
 	else {
 		MakeEntityNonspatial(entity);
@@ -511,16 +628,16 @@ inline Entity* GetEntity(World* world, u32 entity_index)
 	return entity;
 }
 
-internal u32 AddBall(World* world)
+internal u32 AddBall(PlaygroundState* playground_state)
 {
-	// TODO(SSJSR): Think about starting position of non-spatial entities.
+	World* world = &playground_state->world;
 	v2 dimension = v2(0.5f, 0.5f);
 	
-	u32 entity_index = AddEntity(world, EntityType::BALL_TYPE, 0);
+	u32 entity_index = AddEntity(playground_state, world, EntityType::BALL_TYPE, 0);
 	Entity* entity = GetEntity(world, entity_index);
 	
 	entity->collision_volume_group = 
-		MakeCollisionVolumeGroup(world->world_arena, dimension);
+		MakeCollisionVolumeGroup(&playground_state->arena, dimension);
 	AddFlags(entity, EntityFlag::COLLIDES_FLAG | EntityFlag::MOVEABLE_FLAG);
 
 	return entity_index;
@@ -535,7 +652,7 @@ internal u32 AddPlayer(PlaygroundState* playground_state)
 	tile_position.tile_y = 5;
 	v2 dimension = v2(0.6f, 0.9f);
 	
-	u32 entity_index = AddEntity(world, EntityType::PLAYER_TYPE, &tile_position);
+	u32 entity_index = AddEntity(playground_state, world, EntityType::PLAYER_TYPE, &tile_position);
 	Entity* entity = GetEntity(world, entity_index);
 
 	entity->collision_volume_group = 
@@ -543,7 +660,7 @@ internal u32 AddPlayer(PlaygroundState* playground_state)
 
 	AddFlags(entity, EntityFlag::COLLIDES_FLAG | EntityFlag::MOVEABLE_FLAG);
 
-	entity->ball_index = AddBall(world);
+	entity->ball_index = AddBall(playground_state);
 	
 	AddAnimationGroup(entity, playground_state->player_idle_animations);
 	AddAnimationGroup(entity, playground_state->player_run_animations);
@@ -563,7 +680,7 @@ internal u32 AddFamiliar(PlaygroundState* playground_state)
 	TilePosition tile_position = player_entity->tile_position;
 	v2 dimension = v2(0.5f, 0.6f);
 	
-	u32 entity_index = AddEntity(world, EntityType::FAMILIAR_TYPE, &tile_position);
+	u32 entity_index = AddEntity(playground_state, world, EntityType::FAMILIAR_TYPE, &tile_position);
 	Entity* entity = GetEntity(world, entity_index);
 	
 	entity->collision_volume_group = 
@@ -576,35 +693,37 @@ internal u32 AddFamiliar(PlaygroundState* playground_state)
 	return entity_index;
 }
 
-internal u32 AddWall(World* world, i32 tile_x, i32 tile_y, f32 width, f32 height)
+internal u32 AddWall(PlaygroundState* playground_state, i32 tile_x, i32 tile_y, f32 width, f32 height)
 {
+	World* world = &playground_state->world;
 	TilePosition tile_position = {};
 	tile_position.tile_x = tile_x;
 	tile_position.tile_y = tile_y;
 	v2 dimension = v2(width, height);
 	
-	u32 entity_index = AddEntity(world, EntityType::WALL_TYPE, &tile_position);
+	u32 entity_index = AddEntity(playground_state, world, EntityType::WALL_TYPE, &tile_position);
 	Entity* entity = GetEntity(world, entity_index);
 	
 	entity->collision_volume_group = 
-		MakeCollisionVolumeGroup(world->world_arena, dimension);
+		MakeCollisionVolumeGroup(&playground_state->arena, dimension);
 	AddFlags(entity, EntityFlag::COLLIDES_FLAG);
 
 	return entity_index;
 }
 
-internal u32 AddMonster(World* world, i32 tile_x, i32 tile_y)
+internal u32 AddMonster(PlaygroundState* playground_state, i32 tile_x, i32 tile_y)
 {
+	World* world = &playground_state->world;
 	TilePosition tile_position = {};
 	tile_position.tile_x = tile_x;
 	tile_position.tile_y = tile_y;
 	v2 dimension = v2(0.6f, 0.9f);
 	
-	u32 entity_index = AddEntity(world, EntityType::MONSTER_TYPE, &tile_position);
+	u32 entity_index = AddEntity(playground_state, world, EntityType::MONSTER_TYPE, &tile_position);
 	Entity* entity = GetEntity(world, entity_index);
 	
 	entity->collision_volume_group = 
-		MakeCollisionVolumeGroup(world->world_arena, dimension);
+		MakeCollisionVolumeGroup(&playground_state->arena, dimension);
 	AddFlags(entity, EntityFlag::COLLIDES_FLAG);
 
 	return entity_index;

@@ -14,7 +14,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 	World* world = &playground_state->world;
 
 	if (!memory->is_initialized) {
-		AddEntity(world, EntityType::NULL_TYPE, 0);
+		AddEntity(playground_state, world, EntityType::NULL_TYPE, 0);
 
 		playground_state->screen_center = v2((f32)(display_buffer->width / 2),
 											 (f32)(display_buffer->height / 2));
@@ -25,7 +25,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 						memory->permanent_storage_size - sizeof(*playground_state),
 						(u8*)memory->permanent_storage + sizeof(*playground_state));
 
-		world->world_arena = &playground_state->arena;
+		// world->world_arena = &playground_state->arena;
 
 		for (i32 tile_map_y = 0;
 			 tile_map_y < (i32)world->tile_map_count_y;
@@ -38,21 +38,21 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				i32 tile_y_0 = tile_map_y * world->tile_count_y + 0;
 
 				if (tile_map_x == 0) {
-					AddWall(world, tile_x_0, tile_y_0 + 1,
+					AddWall(playground_state, tile_x_0, tile_y_0 + 1,
 							world->tile_side_in_meters, (f32)world->tile_count_y - 2);
 				}
 				else {
-					AddWall(world, tile_x_0, tile_y_0 + 3,
+					AddWall(playground_state, tile_x_0, tile_y_0 + 3,
 							world->tile_side_in_meters, (f32)world->tile_count_y - 4);
 				}
 
-				AddWall(world, tile_x_0, tile_y_0 + world->tile_count_y - 1,
+				AddWall(playground_state, tile_x_0, tile_y_0 + world->tile_count_y - 1,
 						(f32)world->tile_count_x, world->tile_side_in_meters);
 
-				AddWall(world, tile_x_0 + world->tile_count_x - 1, tile_y_0 + 3,
+				AddWall(playground_state, tile_x_0 + world->tile_count_x - 1, tile_y_0 + 3,
 						world->tile_side_in_meters, (f32)world->tile_count_y - 4);
 
-				AddWall(world, tile_x_0, tile_y_0,
+				AddWall(playground_state, tile_x_0, tile_y_0,
 						(f32)world->tile_count_x, world->tile_side_in_meters);
 
 				// for (i32 y = 0; y < world->tile_count_y; ++y) {
@@ -97,33 +97,33 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 			f32 player_scale = 2.0f;
 
-			playground_state->player_idle_00 = LoadBmp("adventurer/idle/adventurer-idle-2-00.bmp", memory->PlaygroundReadFile, 25, 22);
-			playground_state->player_idle_01 = LoadBmp("adventurer/idle/adventurer-idle-2-01.bmp", memory->PlaygroundReadFile, 25, 22);
-			playground_state->player_idle_02 = LoadBmp("adventurer/idle/adventurer-idle-2-02.bmp", memory->PlaygroundReadFile, 25, 22);
-			playground_state->player_idle_03 = LoadBmp("adventurer/idle/adventurer-idle-2-03.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_idle[0] = LoadBmp("adventurer/idle/adventurer-idle-2-00.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_idle[1] = LoadBmp("adventurer/idle/adventurer-idle-2-01.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_idle[2] = LoadBmp("adventurer/idle/adventurer-idle-2-02.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_idle[3] = LoadBmp("adventurer/idle/adventurer-idle-2-03.bmp", memory->PlaygroundReadFile, 25, 22);
 
-			playground_state->player_idle_00 = ScaleBmp(&playground_state->arena,
-														&playground_state->player_idle_00,
-														(i32)(playground_state->player_idle_00.width * player_scale),
-														(i32)(playground_state->player_idle_00.height * player_scale));
-			playground_state->player_idle_01 = ScaleBmp(&playground_state->arena,
-														&playground_state->player_idle_01,
-														(i32)(playground_state->player_idle_01.width * player_scale),
-														(i32)(playground_state->player_idle_01.height * player_scale));
-			playground_state->player_idle_02 = ScaleBmp(&playground_state->arena,
-														&playground_state->player_idle_02,
-														(i32)(playground_state->player_idle_02.width * player_scale),
-														(i32)(playground_state->player_idle_02.height * player_scale));
-			playground_state->player_idle_03 = ScaleBmp(&playground_state->arena,
-														&playground_state->player_idle_03,
-														(i32)(playground_state->player_idle_03.width * player_scale),
-														(i32)(playground_state->player_idle_03.height * player_scale));
+			playground_state->player_idle[0] = ScaleBmp(&playground_state->arena,
+														&playground_state->player_idle[0],
+														(i32)(playground_state->player_idle[0].width * player_scale),
+														(i32)(playground_state->player_idle[0].height * player_scale));
+			playground_state->player_idle[1] = ScaleBmp(&playground_state->arena,
+														&playground_state->player_idle[1],
+														(i32)(playground_state->player_idle[1].width * player_scale),
+														(i32)(playground_state->player_idle[1].height * player_scale));
+			playground_state->player_idle[2] = ScaleBmp(&playground_state->arena,
+														&playground_state->player_idle[2],
+														(i32)(playground_state->player_idle[2].width * player_scale),
+														(i32)(playground_state->player_idle[2].height * player_scale));
+			playground_state->player_idle[3] = ScaleBmp(&playground_state->arena,
+														&playground_state->player_idle[3],
+														(i32)(playground_state->player_idle[3].width * player_scale),
+														(i32)(playground_state->player_idle[3].height * player_scale));
 
 			Bitmap* player_idle_sprites[4] = {
-				&playground_state->player_idle_00,
-				&playground_state->player_idle_01,
-				&playground_state->player_idle_02,
-				&playground_state->player_idle_03
+				&playground_state->player_idle[0],
+				&playground_state->player_idle[1],
+				&playground_state->player_idle[2],
+				&playground_state->player_idle[3]
 			};
 			u32 player_idle_frame_counts[1] = { 4 };
 			playground_state->player_idle_animations = MakeAnimationGroup(playground_state,
@@ -133,45 +133,45 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 			
 			// NOTE(SSJSR): Run state.
 
-			playground_state->player_run_00 = LoadBmp("adventurer/run/adventurer-run3-00.bmp", memory->PlaygroundReadFile, 25, 22);
-			playground_state->player_run_01 = LoadBmp("adventurer/run/adventurer-run3-01.bmp", memory->PlaygroundReadFile, 25, 22);
-			playground_state->player_run_02 = LoadBmp("adventurer/run/adventurer-run3-02.bmp", memory->PlaygroundReadFile, 25, 22);
-			playground_state->player_run_03 = LoadBmp("adventurer/run/adventurer-run3-03.bmp", memory->PlaygroundReadFile, 25, 22);
-			playground_state->player_run_04 = LoadBmp("adventurer/run/adventurer-run3-04.bmp", memory->PlaygroundReadFile, 25, 22);
-			playground_state->player_run_05 = LoadBmp("adventurer/run/adventurer-run3-05.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_run[0] = LoadBmp("adventurer/run/adventurer-run3-00.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_run[1] = LoadBmp("adventurer/run/adventurer-run3-01.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_run[2] = LoadBmp("adventurer/run/adventurer-run3-02.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_run[3] = LoadBmp("adventurer/run/adventurer-run3-03.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_run[4] = LoadBmp("adventurer/run/adventurer-run3-04.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_run[5] = LoadBmp("adventurer/run/adventurer-run3-05.bmp", memory->PlaygroundReadFile, 25, 22);
 
-			playground_state->player_run_00 = ScaleBmp(&playground_state->arena,
-													   &playground_state->player_run_00,
-													   (i32)(playground_state->player_run_00.width * player_scale),
-													   (i32)(playground_state->player_run_00.height * player_scale));
-			playground_state->player_run_01 = ScaleBmp(&playground_state->arena,
-													   &playground_state->player_run_01,
-													   (i32)(playground_state->player_run_01.width * player_scale),
-													   (i32)(playground_state->player_run_01.height * player_scale));
-			playground_state->player_run_02 = ScaleBmp(&playground_state->arena,
-													   &playground_state->player_run_02,
-													   (i32)(playground_state->player_run_02.width * player_scale),
-													   (i32)(playground_state->player_run_02.height * player_scale));
-			playground_state->player_run_03 = ScaleBmp(&playground_state->arena,
-													   &playground_state->player_run_03,
-													   (i32)(playground_state->player_run_03.width * player_scale),
-													   (i32)(playground_state->player_run_03.height * player_scale));
-			playground_state->player_run_04 = ScaleBmp(&playground_state->arena,
-													   &playground_state->player_run_04,
-													   (i32)(playground_state->player_run_04.width * player_scale),
-													   (i32)(playground_state->player_run_04.height * player_scale));
-			playground_state->player_run_05 = ScaleBmp(&playground_state->arena,
-													   &playground_state->player_run_05,
-													   (i32)(playground_state->player_run_05.width * player_scale),
-													   (i32)(playground_state->player_run_05.height * player_scale));
+			playground_state->player_run[0] = ScaleBmp(&playground_state->arena,
+													   &playground_state->player_run[0],
+													   (i32)(playground_state->player_run[0].width * player_scale),
+													   (i32)(playground_state->player_run[0].height * player_scale));
+			playground_state->player_run[1] = ScaleBmp(&playground_state->arena,
+													   &playground_state->player_run[1],
+													   (i32)(playground_state->player_run[1].width * player_scale),
+													   (i32)(playground_state->player_run[1].height * player_scale));
+			playground_state->player_run[2] = ScaleBmp(&playground_state->arena,
+													   &playground_state->player_run[2],
+													   (i32)(playground_state->player_run[2].width * player_scale),
+													   (i32)(playground_state->player_run[2].height * player_scale));
+			playground_state->player_run[3] = ScaleBmp(&playground_state->arena,
+													   &playground_state->player_run[3],
+													   (i32)(playground_state->player_run[3].width * player_scale),
+													   (i32)(playground_state->player_run[3].height * player_scale));
+			playground_state->player_run[4] = ScaleBmp(&playground_state->arena,
+													   &playground_state->player_run[4],
+													   (i32)(playground_state->player_run[4].width * player_scale),
+													   (i32)(playground_state->player_run[4].height * player_scale));
+			playground_state->player_run[5] = ScaleBmp(&playground_state->arena,
+													   &playground_state->player_run[5],
+													   (i32)(playground_state->player_run[5].width * player_scale),
+													   (i32)(playground_state->player_run[5].height * player_scale));
 
 			Bitmap* player_run_sprites[6] = {
-				&playground_state->player_run_00,
-				&playground_state->player_run_01,
-				&playground_state->player_run_02,
-				&playground_state->player_run_03,
-				&playground_state->player_run_04,
-				&playground_state->player_run_05
+				&playground_state->player_run[0],
+				&playground_state->player_run[1],
+				&playground_state->player_run[2],
+				&playground_state->player_run[3],
+				&playground_state->player_run[4],
+				&playground_state->player_run[5]
 			};
 			u32 player_run_frame_counts[1] = { 6 };
 			playground_state->player_run_animations = MakeAnimationGroup(playground_state,
@@ -183,21 +183,21 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 			// Bitmap player_jump_00 = LoadBmp("adventurer/jump/adventurer-jump-00.bmp", memory->PlaygroundReadFile, 25, 22);
 			// Bitmap player_jump_01 = LoadBmp("adventurer/jump/adventurer-jump-01.bmp", memory->PlaygroundReadFile, 25, 22);
-			playground_state->player_jump_02 = LoadBmp("adventurer/jump/adventurer-jump-02.bmp", memory->PlaygroundReadFile, 25, 22);
-			playground_state->player_jump_03 = LoadBmp("adventurer/jump/adventurer-jump-03.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_jump[0] = LoadBmp("adventurer/jump/adventurer-jump-02.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_jump[1] = LoadBmp("adventurer/jump/adventurer-jump-03.bmp", memory->PlaygroundReadFile, 25, 22);
 
-			playground_state->player_jump_02 = ScaleBmp(&playground_state->arena,
-														&playground_state->player_jump_02,
-														(i32)(playground_state->player_jump_02.width * player_scale),
-														(i32)(playground_state->player_jump_02.height * player_scale));
-			playground_state->player_jump_03 = ScaleBmp(&playground_state->arena,
-														&playground_state->player_jump_03,
-														(i32)(playground_state->player_jump_03.width * player_scale),
-														(i32)(playground_state->player_jump_03.height * player_scale));
+			playground_state->player_jump[0] = ScaleBmp(&playground_state->arena,
+														&playground_state->player_jump[0],
+														(i32)(playground_state->player_jump[0].width * player_scale),
+														(i32)(playground_state->player_jump[0].height * player_scale));
+			playground_state->player_jump[1] = ScaleBmp(&playground_state->arena,
+														&playground_state->player_jump[1],
+														(i32)(playground_state->player_jump[1].width * player_scale),
+														(i32)(playground_state->player_jump[1].height * player_scale));
 
 			Bitmap* player_jump_sprites[2] = {
-				&playground_state->player_jump_02,
-				&playground_state->player_jump_03
+				&playground_state->player_jump[0],
+				&playground_state->player_jump[1]
 			};
 			u32 player_jump_frame_counts[1] = { 2 };
 			playground_state->player_jump_animations = MakeAnimationGroup(playground_state,
@@ -207,33 +207,33 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 			// NOTE(SSJSR): Jump 2 state.
 
-			playground_state->player_jump_2_00 = LoadBmp("adventurer/jump/adventurer-smrslt-00.bmp", memory->PlaygroundReadFile, 25, 22);
-			playground_state->player_jump_2_01 = LoadBmp("adventurer/jump/adventurer-smrslt-01.bmp", memory->PlaygroundReadFile, 25, 22);
-			playground_state->player_jump_2_02 = LoadBmp("adventurer/jump/adventurer-smrslt-02.bmp", memory->PlaygroundReadFile, 25, 22);
-			playground_state->player_jump_2_03 = LoadBmp("adventurer/jump/adventurer-smrslt-03.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_jump_2[0] = LoadBmp("adventurer/jump/adventurer-smrslt-00.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_jump_2[1] = LoadBmp("adventurer/jump/adventurer-smrslt-01.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_jump_2[2] = LoadBmp("adventurer/jump/adventurer-smrslt-02.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_jump_2[3] = LoadBmp("adventurer/jump/adventurer-smrslt-03.bmp", memory->PlaygroundReadFile, 25, 22);
 
-			playground_state->player_jump_2_00 = ScaleBmp(&playground_state->arena,
-														  &playground_state->player_jump_2_00,
-														  (i32)(playground_state->player_jump_2_00.width * player_scale),
-														  (i32)(playground_state->player_jump_2_00.height * player_scale));
-			playground_state->player_jump_2_01 = ScaleBmp(&playground_state->arena,
-														  &playground_state->player_jump_2_01,
-														  (i32)(playground_state->player_jump_2_01.width * player_scale),
-														  (i32)(playground_state->player_jump_2_01.height * player_scale));
-			playground_state->player_jump_2_02 = ScaleBmp(&playground_state->arena,
-														  &playground_state->player_jump_2_02,
-														  (i32)(playground_state->player_jump_2_02.width * player_scale),
-														  (i32)(playground_state->player_jump_2_02.height * player_scale));
-			playground_state->player_jump_2_03 = ScaleBmp(&playground_state->arena,
-														  &playground_state->player_jump_2_03,
-														  (i32)(playground_state->player_jump_2_03.width * player_scale),
-														  (i32)(playground_state->player_jump_2_03.height * player_scale));
+			playground_state->player_jump_2[0] = ScaleBmp(&playground_state->arena,
+														  &playground_state->player_jump_2[0],
+														  (i32)(playground_state->player_jump_2[0].width * player_scale),
+														  (i32)(playground_state->player_jump_2[0].height * player_scale));
+			playground_state->player_jump_2[1] = ScaleBmp(&playground_state->arena,
+														  &playground_state->player_jump_2[1],
+														  (i32)(playground_state->player_jump_2[1].width * player_scale),
+														  (i32)(playground_state->player_jump_2[1].height * player_scale));
+			playground_state->player_jump_2[2] = ScaleBmp(&playground_state->arena,
+														  &playground_state->player_jump_2[2],
+														  (i32)(playground_state->player_jump_2[2].width * player_scale),
+														  (i32)(playground_state->player_jump_2[2].height * player_scale));
+			playground_state->player_jump_2[3] = ScaleBmp(&playground_state->arena,
+														  &playground_state->player_jump_2[3],
+														  (i32)(playground_state->player_jump_2[3].width * player_scale),
+														  (i32)(playground_state->player_jump_2[3].height * player_scale));
 
 			Bitmap* player_jump_2_sprites[4] = {
-				&playground_state->player_jump_2_00,
-				&playground_state->player_jump_2_01,
-				&playground_state->player_jump_2_02,
-				&playground_state->player_jump_2_03
+				&playground_state->player_jump_2[0],
+				&playground_state->player_jump_2[1],
+				&playground_state->player_jump_2[2],
+				&playground_state->player_jump_2[3]
 			};
 			u32 player_jump_2_frame_counts[1] = { 4 };
 			playground_state->player_jump_2_animations = MakeAnimationGroup(playground_state,
@@ -243,42 +243,42 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 			// NOTE(SSJSR): Fall state.
 
-			playground_state->player_fall_00 = LoadBmp("adventurer/fall/adventurer-fall-00.bmp", memory->PlaygroundReadFile, 25, 22);
-			playground_state->player_fall_01 = LoadBmp("adventurer/fall/adventurer-fall-01.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_fall[0] = LoadBmp("adventurer/fall/adventurer-fall-00.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_fall[1] = LoadBmp("adventurer/fall/adventurer-fall-01.bmp", memory->PlaygroundReadFile, 25, 22);
 
-			playground_state->player_fall_00 = ScaleBmp(&playground_state->arena,
-														&playground_state->player_fall_00,
-														(i32)(playground_state->player_fall_00.width * player_scale),
-														(i32)(playground_state->player_fall_00.height * player_scale));
-			playground_state->player_fall_01 = ScaleBmp(&playground_state->arena,
-														&playground_state->player_fall_01,
-														(i32)(playground_state->player_fall_01.width * player_scale),
-														(i32)(playground_state->player_fall_01.height * player_scale));
+			playground_state->player_fall[0] = ScaleBmp(&playground_state->arena,
+														&playground_state->player_fall[0],
+														(i32)(playground_state->player_fall[0].width * player_scale),
+														(i32)(playground_state->player_fall[0].height * player_scale));
+			playground_state->player_fall[1] = ScaleBmp(&playground_state->arena,
+														&playground_state->player_fall[1],
+														(i32)(playground_state->player_fall[1].width * player_scale),
+														(i32)(playground_state->player_fall[1].height * player_scale));
 
 			Bitmap* player_fall_sprites[2] = {
-				&playground_state->player_fall_00,
-				&playground_state->player_fall_01,
+				&playground_state->player_fall[0],
+				&playground_state->player_fall[1],
 			};
 			u32 player_fall_frame_counts[1] = { 2 };
 			playground_state->player_fall_animations = MakeAnimationGroup(playground_state, 1, 0.2f, AnimationType::FALL_ANIMATION_TYPE, player_fall_sprites, player_fall_frame_counts);
 
 			// NOTE(SSJSR): Wall slide state.
 
-			playground_state->player_wall_slide_00 = LoadBmp("adventurer/wall_slide/adventurer-wall-slide-00.bmp", memory->PlaygroundReadFile, 25, 22);
-			playground_state->player_wall_slide_01 = LoadBmp("adventurer/wall_slide/adventurer-wall-slide-01.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_wall_slide[0] = LoadBmp("adventurer/wall_slide/adventurer-wall-slide-00.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_wall_slide[1] = LoadBmp("adventurer/wall_slide/adventurer-wall-slide-01.bmp", memory->PlaygroundReadFile, 25, 22);
 
-			playground_state->player_wall_slide_00 = ScaleBmp(&playground_state->arena,
-															  &playground_state->player_wall_slide_00,
-															  (i32)(playground_state->player_wall_slide_00.width * player_scale),
-															  (i32)(playground_state->player_wall_slide_00.height * player_scale));
-			playground_state->player_wall_slide_01 = ScaleBmp(&playground_state->arena,
-															  &playground_state->player_wall_slide_01,
-															  (i32)(playground_state->player_wall_slide_01.width * player_scale),
-															  (i32)(playground_state->player_wall_slide_01.height * player_scale));
+			playground_state->player_wall_slide[0] = ScaleBmp(&playground_state->arena,
+															  &playground_state->player_wall_slide[0],
+															  (i32)(playground_state->player_wall_slide[0].width * player_scale),
+															  (i32)(playground_state->player_wall_slide[0].height * player_scale));
+			playground_state->player_wall_slide[1] = ScaleBmp(&playground_state->arena,
+															  &playground_state->player_wall_slide[1],
+															  (i32)(playground_state->player_wall_slide[1].width * player_scale),
+															  (i32)(playground_state->player_wall_slide[1].height * player_scale));
 
 			Bitmap* player_wall_slide_sprites[2] = {
-				&playground_state->player_wall_slide_00,
-				&playground_state->player_wall_slide_01,
+				&playground_state->player_wall_slide[0],
+				&playground_state->player_wall_slide[1],
 			};
 			u32 player_wall_slide_frame_counts[1] = { 2 };
 			playground_state->player_wall_slide_animations = MakeAnimationGroup(playground_state,
@@ -300,33 +300,33 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 			f32 familiar_scale = 1.0f;
 			// NOTE(SSJSR): Idle state.
 			
-			playground_state->familiar_idle_00 = LoadBmp("familiar/idle/owlet-monster-idle-00.bmp", memory->PlaygroundReadFile, 15, 14);
-			playground_state->familiar_idle_01 = LoadBmp("familiar/idle/owlet-monster-idle-01.bmp", memory->PlaygroundReadFile, 15, 14);
-			playground_state->familiar_idle_02 = LoadBmp("familiar/idle/owlet-monster-idle-02.bmp", memory->PlaygroundReadFile, 15, 14);
-			playground_state->familiar_idle_03 = LoadBmp("familiar/idle/owlet-monster-idle-03.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_idle[0] = LoadBmp("familiar/idle/owlet-monster-idle-00.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_idle[1] = LoadBmp("familiar/idle/owlet-monster-idle-01.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_idle[2] = LoadBmp("familiar/idle/owlet-monster-idle-02.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_idle[3] = LoadBmp("familiar/idle/owlet-monster-idle-03.bmp", memory->PlaygroundReadFile, 15, 14);
 
-			playground_state->familiar_idle_00 = ScaleBmp(&playground_state->arena,
-														  &playground_state->familiar_idle_00,
-														  (i32)(playground_state->familiar_idle_00.width * familiar_scale),
-														  (i32)(playground_state->familiar_idle_00.height * familiar_scale));
-			playground_state->familiar_idle_01 = ScaleBmp(&playground_state->arena,
-														  &playground_state->familiar_idle_01,
-														  (i32)(playground_state->familiar_idle_01.width * familiar_scale),
-														  (i32)(playground_state->familiar_idle_01.height * familiar_scale));
-			playground_state->familiar_idle_02 = ScaleBmp(&playground_state->arena,
-														  &playground_state->familiar_idle_02,
-														  (i32)(playground_state->familiar_idle_02.width * familiar_scale),
-														  (i32)(playground_state->familiar_idle_02.height * familiar_scale));
-			playground_state->familiar_idle_03 = ScaleBmp(&playground_state->arena,
-														  &playground_state->familiar_idle_03,
-														  (i32)(playground_state->familiar_idle_03.width * familiar_scale),
-														  (i32)(playground_state->familiar_idle_03.height * familiar_scale));
+			playground_state->familiar_idle[0] = ScaleBmp(&playground_state->arena,
+														  &playground_state->familiar_idle[0],
+														  (i32)(playground_state->familiar_idle[0].width * familiar_scale),
+														  (i32)(playground_state->familiar_idle[0].height * familiar_scale));
+			playground_state->familiar_idle[1] = ScaleBmp(&playground_state->arena,
+														  &playground_state->familiar_idle[1],
+														  (i32)(playground_state->familiar_idle[1].width * familiar_scale),
+														  (i32)(playground_state->familiar_idle[1].height * familiar_scale));
+			playground_state->familiar_idle[2] = ScaleBmp(&playground_state->arena,
+														  &playground_state->familiar_idle[2],
+														  (i32)(playground_state->familiar_idle[2].width * familiar_scale),
+														  (i32)(playground_state->familiar_idle[2].height * familiar_scale));
+			playground_state->familiar_idle[3] = ScaleBmp(&playground_state->arena,
+														  &playground_state->familiar_idle[3],
+														  (i32)(playground_state->familiar_idle[3].width * familiar_scale),
+														  (i32)(playground_state->familiar_idle[3].height * familiar_scale));
 
 			Bitmap* familiar_idle_sprites[4] = {
-				&playground_state->familiar_idle_00,
-				&playground_state->familiar_idle_01,
-				&playground_state->familiar_idle_02,
-				&playground_state->familiar_idle_03
+				&playground_state->familiar_idle[0],
+				&playground_state->familiar_idle[1],
+				&playground_state->familiar_idle[2],
+				&playground_state->familiar_idle[3]
 			};
 			u32 familiar_idle_frame_counts[1] = { 4 };
 			playground_state->familiar_idle_animations = MakeAnimationGroup(playground_state,
@@ -336,84 +336,84 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 			// NOTE(SSJSR): Run state.
 			
-			playground_state->familiar_run_00 = LoadBmp("familiar/run/owlet-monster-run-00.bmp", memory->PlaygroundReadFile, 15, 14);
-			playground_state->familiar_run_01 =	LoadBmp("familiar/run/owlet-monster-run-01.bmp", memory->PlaygroundReadFile, 15, 14);
-			playground_state->familiar_run_02 =	LoadBmp("familiar/run/owlet-monster-run-02.bmp", memory->PlaygroundReadFile, 15, 14);
-			playground_state->familiar_run_03 =	LoadBmp("familiar/run/owlet-monster-run-03.bmp", memory->PlaygroundReadFile, 15, 14);
-			playground_state->familiar_run_04 = LoadBmp("familiar/run/owlet-monster-run-04.bmp", memory->PlaygroundReadFile, 15, 14);
-			playground_state->familiar_run_05 = LoadBmp("familiar/run/owlet-monster-run-05.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_run[0] = LoadBmp("familiar/run/owlet-monster-run-00.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_run[1] =	LoadBmp("familiar/run/owlet-monster-run-01.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_run[2] =	LoadBmp("familiar/run/owlet-monster-run-02.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_run[3] =	LoadBmp("familiar/run/owlet-monster-run-03.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_run[4] = LoadBmp("familiar/run/owlet-monster-run-04.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_run[5] = LoadBmp("familiar/run/owlet-monster-run-05.bmp", memory->PlaygroundReadFile, 15, 14);
 			
-			playground_state->familiar_run_00 = ScaleBmp(&playground_state->arena,
-														 &playground_state->familiar_run_00,
-														 (i32)(playground_state->familiar_run_00.width * familiar_scale),
-														 (i32)(playground_state->familiar_run_00.height * familiar_scale));
-			playground_state->familiar_run_01 = ScaleBmp(&playground_state->arena,
-														 &playground_state->familiar_run_01,
-														 (i32)(playground_state->familiar_run_01.width * familiar_scale),
-														 (i32)(playground_state->familiar_run_01.height * familiar_scale));
-			playground_state->familiar_run_02 = ScaleBmp(&playground_state->arena,
-														 &playground_state->familiar_run_02,
-														 (i32)(playground_state->familiar_run_02.width * familiar_scale),
-														 (i32)(playground_state->familiar_run_02.height * familiar_scale));
-			playground_state->familiar_run_03 = ScaleBmp(&playground_state->arena,
-														 &playground_state->familiar_run_03,
-														 (i32)(playground_state->familiar_run_03.width * familiar_scale),
-														 (i32)(playground_state->familiar_run_03.height * familiar_scale));
-			playground_state->familiar_run_04 = ScaleBmp(&playground_state->arena,
-														 &playground_state->familiar_run_04,
-														 (i32)(playground_state->familiar_run_04.width * familiar_scale),
-														 (i32)(playground_state->familiar_run_04.height * familiar_scale));
-			playground_state->familiar_run_05 = ScaleBmp(&playground_state->arena,
-														 &playground_state->familiar_run_05,
-														 (i32)(playground_state->familiar_run_05.width * familiar_scale),
-														 (i32)(playground_state->familiar_run_05.height * familiar_scale));
+			playground_state->familiar_run[0] = ScaleBmp(&playground_state->arena,
+														 &playground_state->familiar_run[0],
+														 (i32)(playground_state->familiar_run[0].width * familiar_scale),
+														 (i32)(playground_state->familiar_run[0].height * familiar_scale));
+			playground_state->familiar_run[1] = ScaleBmp(&playground_state->arena,
+														 &playground_state->familiar_run[1],
+														 (i32)(playground_state->familiar_run[1].width * familiar_scale),
+														 (i32)(playground_state->familiar_run[1].height * familiar_scale));
+			playground_state->familiar_run[2] = ScaleBmp(&playground_state->arena,
+														 &playground_state->familiar_run[2],
+														 (i32)(playground_state->familiar_run[2].width * familiar_scale),
+														 (i32)(playground_state->familiar_run[2].height * familiar_scale));
+			playground_state->familiar_run[3] = ScaleBmp(&playground_state->arena,
+														 &playground_state->familiar_run[3],
+														 (i32)(playground_state->familiar_run[3].width * familiar_scale),
+														 (i32)(playground_state->familiar_run[3].height * familiar_scale));
+			playground_state->familiar_run[4] = ScaleBmp(&playground_state->arena,
+														 &playground_state->familiar_run[4],
+														 (i32)(playground_state->familiar_run[4].width * familiar_scale),
+														 (i32)(playground_state->familiar_run[4].height * familiar_scale));
+			playground_state->familiar_run[5] = ScaleBmp(&playground_state->arena,
+														 &playground_state->familiar_run[5],
+														 (i32)(playground_state->familiar_run[5].width * familiar_scale),
+														 (i32)(playground_state->familiar_run[5].height * familiar_scale));
 
-			playground_state->familiar_run_dust_00 = LoadBmp("familiar/run/owlet-run-dust-00.bmp", memory->PlaygroundReadFile, 15, 14);
-			playground_state->familiar_run_dust_01 = LoadBmp("familiar/run/owlet-run-dust-01.bmp", memory->PlaygroundReadFile, 15, 14);
-			playground_state->familiar_run_dust_02 = LoadBmp("familiar/run/owlet-run-dust-02.bmp", memory->PlaygroundReadFile, 15, 14);
-			playground_state->familiar_run_dust_03 = LoadBmp("familiar/run/owlet-run-dust-03.bmp", memory->PlaygroundReadFile, 15, 14);
-			playground_state->familiar_run_dust_04 = LoadBmp("familiar/run/owlet-run-dust-04.bmp", memory->PlaygroundReadFile, 15, 14);
-			playground_state->familiar_run_dust_05 = LoadBmp("familiar/run/owlet-run-dust-05.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_run_dust[0] = LoadBmp("familiar/run/owlet-run-dust-00.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_run_dust[1] = LoadBmp("familiar/run/owlet-run-dust-01.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_run_dust[2] = LoadBmp("familiar/run/owlet-run-dust-02.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_run_dust[3] = LoadBmp("familiar/run/owlet-run-dust-03.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_run_dust[4] = LoadBmp("familiar/run/owlet-run-dust-04.bmp", memory->PlaygroundReadFile, 15, 14);
+			playground_state->familiar_run_dust[5] = LoadBmp("familiar/run/owlet-run-dust-05.bmp", memory->PlaygroundReadFile, 15, 14);
 			
-			playground_state->familiar_run_dust_00 = ScaleBmp(&playground_state->arena,
-														 &playground_state->familiar_run_dust_00,
-														 (i32)(playground_state->familiar_run_dust_00.width * familiar_scale),
-														 (i32)(playground_state->familiar_run_dust_00.height * familiar_scale));
-			playground_state->familiar_run_dust_01 = ScaleBmp(&playground_state->arena,
-														 &playground_state->familiar_run_dust_01,
-														 (i32)(playground_state->familiar_run_dust_01.width * familiar_scale),
-														 (i32)(playground_state->familiar_run_dust_01.height * familiar_scale));
-			playground_state->familiar_run_dust_02 = ScaleBmp(&playground_state->arena,
-														 &playground_state->familiar_run_dust_02,
-														 (i32)(playground_state->familiar_run_dust_02.width * familiar_scale),
-														 (i32)(playground_state->familiar_run_dust_02.height * familiar_scale));
-			playground_state->familiar_run_dust_03 = ScaleBmp(&playground_state->arena,
-														 &playground_state->familiar_run_dust_03,
-														 (i32)(playground_state->familiar_run_dust_03.width * familiar_scale),
-														 (i32)(playground_state->familiar_run_dust_03.height * familiar_scale));
-			playground_state->familiar_run_dust_04 = ScaleBmp(&playground_state->arena,
-														 &playground_state->familiar_run_dust_04,
-														 (i32)(playground_state->familiar_run_dust_04.width * familiar_scale),
-														 (i32)(playground_state->familiar_run_dust_04.height * familiar_scale));
-			playground_state->familiar_run_dust_05 = ScaleBmp(&playground_state->arena,
-														 &playground_state->familiar_run_dust_05,
-														 (i32)(playground_state->familiar_run_dust_05.width * familiar_scale),
-														 (i32)(playground_state->familiar_run_dust_05.height * familiar_scale));
+			playground_state->familiar_run_dust[0] = ScaleBmp(&playground_state->arena,
+														 &playground_state->familiar_run_dust[0],
+														 (i32)(playground_state->familiar_run_dust[0].width * familiar_scale),
+														 (i32)(playground_state->familiar_run_dust[0].height * familiar_scale));
+			playground_state->familiar_run_dust[1] = ScaleBmp(&playground_state->arena,
+														 &playground_state->familiar_run_dust[1],
+														 (i32)(playground_state->familiar_run_dust[1].width * familiar_scale),
+														 (i32)(playground_state->familiar_run_dust[1].height * familiar_scale));
+			playground_state->familiar_run_dust[2] = ScaleBmp(&playground_state->arena,
+														 &playground_state->familiar_run_dust[2],
+														 (i32)(playground_state->familiar_run_dust[2].width * familiar_scale),
+														 (i32)(playground_state->familiar_run_dust[2].height * familiar_scale));
+			playground_state->familiar_run_dust[3] = ScaleBmp(&playground_state->arena,
+														 &playground_state->familiar_run_dust[3],
+														 (i32)(playground_state->familiar_run_dust[3].width * familiar_scale),
+														 (i32)(playground_state->familiar_run_dust[3].height * familiar_scale));
+			playground_state->familiar_run_dust[4] = ScaleBmp(&playground_state->arena,
+														 &playground_state->familiar_run_dust[4],
+														 (i32)(playground_state->familiar_run_dust[4].width * familiar_scale),
+														 (i32)(playground_state->familiar_run_dust[4].height * familiar_scale));
+			playground_state->familiar_run_dust[5] = ScaleBmp(&playground_state->arena,
+														 &playground_state->familiar_run_dust[5],
+														 (i32)(playground_state->familiar_run_dust[5].width * familiar_scale),
+														 (i32)(playground_state->familiar_run_dust[5].height * familiar_scale));
 
 			Bitmap* familiar_run_sprites[12] = {
-				&playground_state->familiar_run_00,
-				&playground_state->familiar_run_01,
-				&playground_state->familiar_run_02,
-				&playground_state->familiar_run_03,
-				&playground_state->familiar_run_04,
-				&playground_state->familiar_run_05,
+				&playground_state->familiar_run[0],
+				&playground_state->familiar_run[1],
+				&playground_state->familiar_run[2],
+				&playground_state->familiar_run[3],
+				&playground_state->familiar_run[4],
+				&playground_state->familiar_run[5],
 
-				&playground_state->familiar_run_dust_00,
-				&playground_state->familiar_run_dust_01,
-				&playground_state->familiar_run_dust_02,
-				&playground_state->familiar_run_dust_03,
-				&playground_state->familiar_run_dust_04,
-				&playground_state->familiar_run_dust_05
+				&playground_state->familiar_run_dust[0],
+				&playground_state->familiar_run_dust[1],
+				&playground_state->familiar_run_dust[2],
+				&playground_state->familiar_run_dust[3],
+				&playground_state->familiar_run_dust[4],
+				&playground_state->familiar_run_dust[5]
 			};
 			u32 familiar_run_frame_counts[2] = { 6, 6 };
 			playground_state->familiar_run_animations = MakeAnimationGroup(playground_state,
@@ -425,11 +425,11 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 		world->player_entity_index =
 			AddPlayer(playground_state);
 
-		AddWall(world, 3, 3, 2.0f, 13.0f);
-		AddWall(world, 8, 2, 13.0f, 2.0f);
-		AddWall(world, 10, 6, 13.0f, 2.0f);
+		AddWall(playground_state, 3, 3, 2.0f, 13.0f);
+		AddWall(playground_state, 8, 2, 13.0f, 2.0f);
+		AddWall(playground_state, 10, 6, 13.0f, 2.0f);
 
-		AddMonster(world, world->tile_count_x - 7, 10);
+		AddMonster(playground_state, world->tile_count_x - 7, 10);
 		AddFamiliar(playground_state);
 
 		world->camera.tile_x = world->tile_count_x / 2;
@@ -469,10 +469,6 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 		world->meters_to_pixels = world->tile_side_in_pixels / world->tile_side_in_meters;
 	}
 
-	SetCameraLocationAndUpdateEntities(world,
-									   world->camera,
-									   input->delta_time_for_frame);
-
 	Bitmap draw_buffer;
 	draw_buffer.memory = display_buffer->memory;
 	draw_buffer.width = display_buffer->width;
@@ -482,11 +478,22 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				  v2(),
 				  v2((f32)display_buffer->width, (f32)display_buffer->height),
 				  0.6f, 0.6f, 0.6f);
+
+	// TransientState* transient_state = (TransientState*)memory->transient_storage;
+	// if (!transient_state->is_initialized) {
+	// 	InitializeArena(&transient_state->transient_arena,
+	// 					memory->transient_storage_size - sizeof(TransientState),
+	// 					(u8*)memory->transient_storage + sizeof(TransientState));
+
+	// 	transient_state->is_initialized = true;
+	// }
+
+	SetCameraLocationAndUpdateEntities(world,
+									   world->camera,
+									   input->delta_time_for_frame);
+	
 	// DrawBitmap(&draw_buffer, &playground_state->background, 0, 0);
 
-	// for (u32 entity_index = 1;
-	// 	 entity_index < world->entity_count;
-	// 	 ++entity_index) {
 	for (u32 active_entity_index_index = 0; active_entity_index_index < world->active_entity_count; ++active_entity_index_index) {
 
 		u32 entity_index = world->active_entity_indices[active_entity_index_index];
@@ -516,7 +523,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 					IsFlagSet(ball_entity, EntityFlag::NONSPATIAL_FLAG)) {
 					ball_entity->distance_limit = 5.0f;
 					f32 direction_x = entity->facing_direction == 1 ? -1.0f : 1.0f;
-					MakeEntitySpatialAndAddToTileMap(world, ball_entity,
+					MakeEntitySpatialAndAddToTileMap(playground_state, world, ball_entity,
 													 entity->ball_index,
 													 v2(direction_x, 0.0f),
 													 v2(entity->position.x + 1.0f * direction_x,
@@ -587,7 +594,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				b32 flip_horizontally = entity->facing_direction == 1 ? true : false;
 
 				if (entity->distance_limit == 0.0f) {
-					MakeEntityNonspatialAndDeleteFromTileMap(world, entity, entity_index);
+					MakeEntityNonspatialAndDeleteFromTileMap(playground_state, world, entity, entity_index);
 				}
 
 				DrawRectangle(&draw_buffer,
@@ -653,7 +660,8 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 			if (IsFlagSet(entity, EntityFlag::MOVEABLE_FLAG) &&
 				!IsFlagSet(entity, EntityFlag::NONSPATIAL_FLAG)) {
-				MoveEntity(world, entity_index, entity, input->delta_time_for_frame, &move_feature);
+				MoveEntity(playground_state, world,
+						   entity_index, entity, input->delta_time_for_frame, &move_feature);
 			}
 
 			TilePosition new_tile_position =
@@ -661,7 +669,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				InvalidTilePosition() :
 				MapIntoTilePosition(world->camera, entity->position, world->tile_side_in_meters);
 
-			UpdateEntityTileMapAndTilePosition(world, entity, entity_index, &new_tile_position);
+			UpdateEntityTileMapAndTilePosition(playground_state, world, entity, entity_index, &new_tile_position);
 		}
 	}
 
