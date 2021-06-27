@@ -27,6 +27,8 @@ typedef i32 b32;
 #define TERABYTES(value) ((GIGABYTES(value)) * 1024LL)
 
 #define ASSERT(x) if (!(x)) { *(int*)0 = 0; }
+#define INVALID_CODE_PATH ASSERT(!"INVALID CODE PATH")
+#define INVALID_DEFAULT_CASE default: { INVALID_CODE_PATH; } break
 #define ARRAY_COUNT(array) (sizeof(array) / sizeof((array)[0]))
 #define SWAP(a, b, t) do { t temp = (a); a = (b); b = (temp); } while (0)
 #define MINIMUM(a, b) ((a) < (b) ? (a) : (b))
@@ -86,7 +88,7 @@ struct PlaygroundInput
 	
 	union
 	{
-		PlaygroundButton buttons[21];
+		PlaygroundButton buttons[22];
 
 		struct
 		{
@@ -99,6 +101,8 @@ struct PlaygroundInput
 			PlaygroundButton left;
 			PlaygroundButton down;
 			PlaygroundButton right;
+
+			PlaygroundButton attack;
 
 			PlaygroundButton space;
 

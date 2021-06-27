@@ -11,6 +11,39 @@ union v2
 	};
 };
 
+union v3
+{
+	f32 elements[3];
+
+	struct
+	{
+		f32 x;
+		f32 y;
+		f32 z;
+	};
+};
+
+union v4
+{
+	f32 elements[4];
+
+	struct
+	{
+		f32 x;
+		f32 y;
+		f32 z;
+		f32 w;
+	};
+
+	struct
+	{
+		f32 r;
+		f32 g;
+		f32 b;
+		f32 a;
+	};
+};
+
 inline f32 Square(f32 value)
 {
 	f32 result = value * value;
@@ -224,6 +257,8 @@ inline Rectangle2 SubtractDimensionTo(Rectangle2 rect2, v2 dimension)
 }
 
 #define v2(...) v2 { __VA_ARGS__ }
+#define v3(...) v3 { __VA_ARGS__ }
+#define v4(...) v4 { __VA_ARGS__ }
 
 #define PLAYGROUND_MATH_H
 #endif

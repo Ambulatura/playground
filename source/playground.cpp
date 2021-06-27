@@ -1,4 +1,5 @@
 #include "playground.h"
+#include "playground_render.cpp"
 #include "playground_draw.cpp"
 #include "playground_world.cpp"
 #include "playground_entity.cpp"
@@ -24,8 +25,6 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 		InitializeArena(&playground_state->arena,
 						memory->permanent_storage_size - sizeof(*playground_state),
 						(u8*)memory->permanent_storage + sizeof(*playground_state));
-
-		// world->world_arena = &playground_state->arena;
 
 		for (i32 tile_map_y = 0;
 			 tile_map_y < (i32)world->tile_map_count_y;
@@ -286,6 +285,48 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 																				AnimationType::WALL_SLIDE_ANIMATION_TYPE,
 																				player_wall_slide_sprites, player_wall_slide_frame_counts);
 
+			// NOTE(SSJSR): Attack 1  state.
+
+			playground_state->player_attack_1[0] = LoadBmp("adventurer/attack/adventurer-attack1-00.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_attack_1[1] = LoadBmp("adventurer/attack/adventurer-attack1-01.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_attack_1[2] = LoadBmp("adventurer/attack/adventurer-attack1-02.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_attack_1[3] = LoadBmp("adventurer/attack/adventurer-attack1-03.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_attack_1[4] = LoadBmp("adventurer/attack/adventurer-attack1-04.bmp", memory->PlaygroundReadFile, 25, 22);
+
+			playground_state->player_attack_1[0] = ScaleBmp(&playground_state->arena,
+															&playground_state->player_attack_1[0],
+															(i32)(playground_state->player_attack_1[0].width * player_scale),
+															(i32)(playground_state->player_attack_1[0].height * player_scale));
+			playground_state->player_attack_1[1] = ScaleBmp(&playground_state->arena,
+															&playground_state->player_attack_1[1],
+															(i32)(playground_state->player_attack_1[1].width * player_scale),
+															(i32)(playground_state->player_attack_1[1].height * player_scale));
+			playground_state->player_attack_1[2] = ScaleBmp(&playground_state->arena,
+															&playground_state->player_attack_1[2],
+															(i32)(playground_state->player_attack_1[2].width * player_scale),
+															(i32)(playground_state->player_attack_1[2].height * player_scale));
+			playground_state->player_attack_1[3] = ScaleBmp(&playground_state->arena,
+															&playground_state->player_attack_1[3],
+															(i32)(playground_state->player_attack_1[3].width * player_scale),
+															(i32)(playground_state->player_attack_1[3].height * player_scale));
+			playground_state->player_attack_1[4] = ScaleBmp(&playground_state->arena,
+															&playground_state->player_attack_1[4],
+															(i32)(playground_state->player_attack_1[4].width * player_scale),
+															(i32)(playground_state->player_attack_1[4].height * player_scale));
+
+			Bitmap* player_attack_1_sprites[5] = {
+				&playground_state->player_attack_1[0],
+				&playground_state->player_attack_1[1],
+				&playground_state->player_attack_1[2],
+				&playground_state->player_attack_1[3],
+				&playground_state->player_attack_1[4]
+			};
+			u32 player_attack_1_frame_counts[1] = { 5 };
+			playground_state->player_attack_1_animations = MakeAnimationGroup(playground_state,
+																			  1, 0.4f,
+																			  AnimationType::ATTACK_1_ANIMATION_TYPE,
+																			  player_attack_1_sprites, player_attack_1_frame_counts);
+			
 			// NOTE(SSJSR): Cast state.
 
 			// playground_state->player_cast_00 = LoadBmp("adventurer/cast/adventurer-cast-00.bmp", memory->PlaygroundReadFile, 25, 22);
@@ -477,16 +518,19 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 	DrawRectangle(&draw_buffer,
 				  v2(),
 				  v2((f32)display_buffer->width, (f32)display_buffer->height),
-				  0.6f, 0.6f, 0.6f);
+				  v4(0.6f, 0.6f, 0.6f, 1.0f));
 
-	// TransientState* transient_state = (TransientState*)memory->transient_storage;
-	// if (!transient_state->is_initialized) {
-	// 	InitializeArena(&transient_state->transient_arena,
-	// 					memory->transient_storage_size - sizeof(TransientState),
-	// 					(u8*)memory->transient_storage + sizeof(TransientState));
+	TransientState* transient_state = (TransientState*)memory->transient_storage;
+	if (!transient_state->is_initialized) {
+		InitializeArena(&transient_state->transient_arena,
+						memory->transient_storage_size - sizeof(TransientState),
+						(u8*)memory->transient_storage + sizeof(TransientState));
 
-	// 	transient_state->is_initialized = true;
-	// }
+		transient_state->is_initialized = true;
+	}
+
+	TemporaryMemory render_memory = BeginTemporaryMemory(&transient_state->transient_arena);
+	RenderGroup* render_group = AllocateRenderGroup(&transient_state->transient_arena, MEGABYTES(4), world->meters_to_pixels);
 
 	SetCameraLocationAndUpdateEntities(world,
 									   world->camera,
@@ -501,18 +545,20 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 
 		if (entity->updatable) {
 
+			v2* position = PushStruct(&transient_state->transient_arena, v2);
+			*position = v2();
+			render_group->position = position;
+
 			MoveFeature move_feature = {};
 
 			v2 entity_position = GetEntityAlignedPosition(entity);
 			v2 dimension = GetEntityDimension(entity);
-			v2 half_dimension = 0.5f * dimension * world->meters_to_pixels;
+			// v2 half_dimension = 0.5f * dimension * world->meters_to_pixels;
 			
-			v2 entity_center = v2(playground_state->screen_center.x + world->meters_to_pixels * entity_position.x,
-								  playground_state->screen_center.y - world->meters_to_pixels * entity_position.y);
+			// v2 entity_center = v2(playground_state->screen_center.x + world->meters_to_pixels * entity_position.x,
+			// 					  playground_state->screen_center.y - world->meters_to_pixels * entity_position.y);
 
 			if (entity->type == EntityType::PLAYER_TYPE) {
-				AnimationGroup* entity_animation_group = EntityStateControl(playground_state, entity, input);
-
 				move_feature.direction = entity->direction;
 				move_feature.acceleration = v2(80.0f, entity->acceleration.y);
 				move_feature.friction_coefficient = 8.0;
@@ -531,13 +577,12 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 													 v2(15.0f * direction_x, 0.0f));
 				}
 
-				DrawRectangleWithBorder(&draw_buffer,
-										entity_center - half_dimension,
-										entity_center + half_dimension,
-										1.0f, 0.4f, 0.2f,
-										1,
-										0.7f, 0.3f, 0.5f,
-										true);
+				AnimationGroup* entity_animation_group = EntityStateControl(playground_state, entity, input);
+ 
+				MoveEntity(playground_state, world,
+						   entity_index, entity, input->delta_time_for_frame, &move_feature);
+
+				PushRectangle(render_group, v2(), dimension, v4(1.0f, 0.5f, 1.0f, 1.0f));
 
 				if (entity_animation_group) {
 					for (u32 animation_index = 0; animation_index < entity_animation_group->animation_count; ++animation_index) {
@@ -546,10 +591,9 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 						b32 flip_horizontally = entity->facing_direction == 1 ?
 							true : false;
 
-						DrawBitmap(&draw_buffer, sprite,
-								   entity_center.x, entity_center.y,
-								   sprite->align_x, sprite->align_y,
-								   flip_horizontally);
+						PushBitmap(render_group, sprite,
+								   v2(), v2((f32)sprite->align_x, (f32)sprite->align_y),
+								   v4(1.0f, 0.0f, 1.0f, 1.0f), flip_horizontally);
 					}
 				}
 			}
@@ -561,14 +605,6 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 					-0.7f : 0.7f;
 				entity->position.y -= 0.1f;
 
-				// DrawRectangleWithBorder(display_buffer,
-				// 						entity_min.x, entity_min.y,
-				// 						entity_max.x, entity_max.y,
-				// 						1.0f, 0.4f, 0.2f,
-				// 						1,
-				// 						1.0f, 1.0f, 1.0f,
-				// 						true);
-
 				AnimationGroup* entity_animation_group = EntityStateControl(playground_state, entity, input);
 
 				if (entity_animation_group) {
@@ -577,11 +613,10 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 						Bitmap* sprite = entity_animation->frames[entity_animation->frame_index].sprite;
 						b32 flip_horizontally = player_entity->facing_direction == 1 ?
 							true : false;
-
-						DrawBitmap(&draw_buffer, sprite,
-								   entity_center.x, entity_center.y,
-								   sprite->align_x, sprite->align_y,
-								   flip_horizontally);
+						
+						PushBitmap(render_group, sprite,
+								   v2(), v2((f32)sprite->align_x, (f32)sprite->align_y),
+								   v4(1.0f, 0.0f, 1.0f, 1.0f), flip_horizontally);
 					}
 				}
 			}
@@ -597,10 +632,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 					MakeEntityNonspatialAndDeleteFromTileMap(playground_state, world, entity, entity_index);
 				}
 
-				DrawRectangle(&draw_buffer,
-							  entity_center - half_dimension,
-							  entity_center + half_dimension,
-							  0.0f, 0.0f, 0.0f);
+				PushRectangle(render_group, v2(), dimension, v4(0.0f, 0.0f, 0.0f, 1.0f));
 			}
 			else if (entity->type == EntityType::MONSTER_TYPE) {
 
@@ -621,19 +653,17 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				move_feature.friction_coefficient = 8.0f;
 				move_feature.max_unit_vector_length = true;
 
-				DrawRectangleWithBorder(&draw_buffer,
-										entity_center - half_dimension,
-										entity_center + half_dimension,
-										1.0f, 0.5f, 0.0f,
-										5,
-										1.0f, 0.5f, 0.0f,
-										true);
+				MoveEntity(playground_state, world,
+						   entity_index, entity, input->delta_time_for_frame, &move_feature);
+				
+				PushRectangle(render_group,
+							  v2(), dimension,
+							  v4(1.0f, 0.5f, 0.0f, 1.0f));
 			}
 			else {
-				DrawRectangle(&draw_buffer,
-							  entity_center - half_dimension,
-							  entity_center + half_dimension,
-							  0.18f, 0.18f, 0.18f);
+				PushRectangle(render_group,
+							  v2(), dimension,
+							  v4(0.18f, 0.18f, 0.18f, 1.0f));
 
 				// f32 thickness = world->meters_to_pixels * 0.1f;
 
@@ -658,11 +688,11 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				// 			  0.18f, 0.18f, 0.18f);
 			}
 
-			if (IsFlagSet(entity, EntityFlag::MOVEABLE_FLAG) &&
-				!IsFlagSet(entity, EntityFlag::NONSPATIAL_FLAG)) {
-				MoveEntity(playground_state, world,
-						   entity_index, entity, input->delta_time_for_frame, &move_feature);
-			}
+			// if (IsFlagSet(entity, EntityFlag::MOVEABLE_FLAG) &&
+			// 	!IsFlagSet(entity, EntityFlag::NONSPATIAL_FLAG)) {
+			// 	MoveEntity(playground_state, world,
+			// 			   entity_index, entity, input->delta_time_for_frame, &move_feature);
+			// }
 
 			TilePosition new_tile_position =
 				IsFlagSet(entity, EntityFlag::NONSPATIAL_FLAG) ?
@@ -670,8 +700,50 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				MapIntoTilePosition(world->camera, entity->position, world->tile_side_in_meters);
 
 			UpdateEntityTileMapAndTilePosition(playground_state, world, entity, entity_index, &new_tile_position);
+
+			*position = GetEntityAlignedPosition(entity);
 		}
 	}
+
+	for (u32 address = 0;
+		 address < render_group->buffer_size;
+		 ) {
+		RenderGroupElement* element = (RenderGroupElement*)(render_group->base_buffer + address);
+
+		switch (element->type) {
+			case RenderGroupElementType::RENDER_GROUP_ELEMENT_TYPE_BITMAP: {
+				RenderGroupElementBitmap* render_group_element = (RenderGroupElementBitmap*)element;
+
+				v2 position = GetScreenPosition(render_group, &render_group_element->spec, playground_state->screen_center);
+
+				DrawBitmap(&draw_buffer, render_group_element->bitmap,
+						   position.x, position.y, render_group_element->flip_horizontally, render_group_element->spec.color);
+				
+				address += sizeof(*render_group_element);
+			} break;
+
+			case RenderGroupElementType::RENDER_GROUP_ELEMENT_TYPE_RECTANGLE: {
+				RenderGroupElementRectangle* render_group_element = (RenderGroupElementRectangle*)element;
+
+				v2 position = GetScreenPosition(render_group, &render_group_element->spec, playground_state->screen_center);
+				v2 half_dimension = 0.5f * render_group_element->dimension;
+				
+				DrawRectangle(&draw_buffer,
+							  position - half_dimension,
+							  position + half_dimension,
+							  render_group_element->spec.color);
+				
+				address += sizeof(*render_group_element);
+			} break;
+
+			INVALID_DEFAULT_CASE;
+		};
+		
+	}
+
+	EndTemporaryMemory(&render_memory);
+	CheckArena(&transient_state->transient_arena);
+	CheckArena(&playground_state->arena);
 
 	TilePosition new_camera = world->camera;
 

@@ -4,9 +4,10 @@
 
 #include "playground_intrinsics.h"
 #include "playground_math.h"
-#include "playground_draw.h"
+#include "playground_render.h"
 #include "playground_memory.h"
 #include "playground_world.h"
+#include "playground_state.h"
 
 struct PlaygroundState
 {
@@ -23,6 +24,7 @@ struct PlaygroundState
 	Bitmap player_jump_2[4];
 	Bitmap player_fall[2];
 	Bitmap player_wall_slide[2];
+	Bitmap player_attack_1[5];
 	
 	AnimationGroup* player_idle_animations;
 	AnimationGroup* player_run_animations;
@@ -30,6 +32,7 @@ struct PlaygroundState
 	AnimationGroup* player_jump_2_animations;
 	AnimationGroup* player_fall_animations;
 	AnimationGroup* player_wall_slide_animations;
+	AnimationGroup* player_attack_1_animations;
 
 	// LoadedBmp player_cast_00;
 	// LoadedBmp player_cast_01;
@@ -53,12 +56,12 @@ struct PlaygroundState
 	Bitmap background;
 };
 
-// struct TransientState
-// {
-// 	PlaygroundMemoryArena transient_arena;
+struct TransientState
+{
+	PlaygroundMemoryArena transient_arena;
 
-// 	b32 is_initialized;
-// };
+	b32 is_initialized;
+};
 
 #define PLAYGROUND_H
 #endif

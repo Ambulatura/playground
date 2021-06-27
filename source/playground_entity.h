@@ -17,12 +17,21 @@ enum EntityFlag
 	NONSPATIAL_FLAG = (1 << 2),
 	MOVEABLE_FLAG = (1 << 3),
 
-	RUN_FLAG = (1 << 4),
-	JUMP_FLAG = (1 << 5),
-	DOUBLE_JUMP_FLAG = (1 << 6),
-	FALL_FLAG = (1 << 7),
-	ON_GROUND_FLAG = (1 << 8),
-	ON_WALL_FLAG = (1 << 9),
+	// NOTE(SSJSR): Passive states.
+	ON_GROUND_FLAG = (1 << 4),
+	ON_WALL_FLAG = (1 << 5),
+	ON_AIR_FLAG = (1 << 6),
+
+	// NOTE(SSJSR): Active states. (Actions)
+	IDLE_FLAG = (1 << 7),
+	RUN_FLAG = (1 << 8),
+	JUMP_FLAG = (1 << 9),
+	JUMP_2_FLAG = (1 << 10),
+	FALL_FLAG = (1 << 11),
+	WALL_SLIDE_FLAG = (1 << 12),
+	ATTACK_1_FLAG = (1 << 13),
+
+	STATE_ANY = (1 << 13),
 };
 
 enum AnimationType
@@ -35,6 +44,7 @@ enum AnimationType
 	JUMP_2_ANIMATION_TYPE,
 	FALL_ANIMATION_TYPE,
 	WALL_SLIDE_ANIMATION_TYPE,
+	ATTACK_1_ANIMATION_TYPE,
 	CAST_ANIMATION_TYPE,
 
 	MAX_ANIMATION_TYPE,
@@ -105,6 +115,14 @@ struct Entity
 	AnimationGroup* animation_groups[16];
 
 	CollisionVolumeGroup* collision_volume_group;
+
+	f32 state_time;
+
+	u32 last_action;
+	u32 current_action;
+
+	u32 jump_count;
+	u32 attack_count;
 };
 
 struct MoveFeature

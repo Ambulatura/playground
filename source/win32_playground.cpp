@@ -502,6 +502,9 @@ internal LRESULT CALLBACK Win32WindowProc(HWND window_handle,
 					}
 				}
 			}
+			else if (key_code == 'J') {
+				Win32ProcessKeyboardInput(&input->attack, is_down);
+			}
 		} break;
 		case WM_LBUTTONDOWN:
 		case WM_LBUTTONUP:
