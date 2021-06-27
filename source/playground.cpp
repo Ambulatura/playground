@@ -1,6 +1,5 @@
 #include "playground.h"
 #include "playground_render.cpp"
-#include "playground_draw.cpp"
 #include "playground_world.cpp"
 #include "playground_entity.cpp"
 
@@ -582,7 +581,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				MoveEntity(playground_state, world,
 						   entity_index, entity, input->delta_time_for_frame, &move_feature);
 
-				PushRectangle(render_group, v2(), dimension, v4(1.0f, 0.5f, 1.0f, 1.0f));
+				// PushRectangle(render_group, v2(), dimension, v4(1.0f, 0.5f, 1.0f, 1.0f));
 
 				if (entity_animation_group) {
 					for (u32 animation_index = 0; animation_index < entity_animation_group->animation_count; ++animation_index) {
