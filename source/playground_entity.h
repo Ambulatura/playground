@@ -105,8 +105,6 @@ struct Entity
 	u32 facing_direction;
 	
 	TilePosition tile_position;
-	// f32 width;
-	// f32 height;
 
 	u32 ball_index;
 	f32 distance_limit;

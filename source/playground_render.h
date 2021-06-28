@@ -42,36 +42,40 @@ struct BmpHeader
 
 enum RenderGroupElementType
 {
-	RENDER_GROUP_ELEMENT_TYPE_BITMAP,
-	RENDER_GROUP_ELEMENT_TYPE_RECTANGLE,
+	RENDER_GROUP_ELEMENT_TYPE_RenderGroupElementBitmap,
+	RENDER_GROUP_ELEMENT_TYPE_RenderGroupElementRectangle,
+	RENDER_GROUP_ELEMENT_TYPE_RenderGroupElementClear,
 };
 
-struct ElementSpec
+struct RenderElementSpec
 {
 	v2* position;
 	v2 offset;
-	v4 color;
 };
-	
-struct RenderGroupElementRectangle
+
+struct RenderGroupElementHeader
 {
 	RenderGroupElementType type;
-	ElementSpec spec;
+};
+
+struct RenderGroupElementRectangle
+{
+	RenderElementSpec spec;
 	v2 dimension;
+	v4 color;
 };
 
 struct RenderGroupElementBitmap
 {
-	RenderGroupElementType type;
-	ElementSpec spec;
+	RenderElementSpec spec;
 	Bitmap* bitmap;
+	v4 color;
 	b32 flip_horizontally;
 };
 
-struct RenderGroupElement
+struct RenderGroupElementClear
 {
-	RenderGroupElementType type;
-	ElementSpec spec;
+	v4 color;
 };
 
 struct RenderGroup

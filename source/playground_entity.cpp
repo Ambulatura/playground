@@ -552,12 +552,6 @@ internal void MoveEntity(PlaygroundState* playground_state, World* world, u32 en
 		entity->current_action = FALL_ACTION;
 	}
 
-	
-	// if (entity->current_action != WALL_SLIDE_ACTION &&
-	// 	entity->velocity.y < 0.0f) {
-	// 	entity->current_action = FALL_ACTION;
-	// }
-
 	if (entity->distance_limit != 0.0f) {
 		entity->distance_limit = distance_remaining;
 	}
@@ -566,29 +560,12 @@ internal void MoveEntity(PlaygroundState* playground_state, World* world, u32 en
 	// 	MakeEntityNonspatialAndDeleteFromTileMap(playground_state, world, entity, entity_index);
 	// }
 
-	// if (entity->velocity.x < 0.0f) {
-	// 	entity->facing_direction = 1; // Left
-	// }
-	// else if (entity->velocity.x > 0.0f) {
-	// 	entity->facing_direction = 2; // Right
-	// }
-
 	if (entity->direction.x < 0.0f) {
 		entity->facing_direction = 1; // Left
 	}
 	else if (entity->direction.x > 0.0f) {
 		entity->facing_direction = 2; // Right
 	}
-
-	// for (u32 transition_index = 0; transition_index < ARRAY_COUNT(state_transitions); ++transition_index) {
-	// 	StateTransition* state_transition = state_transitions + transition_index;
-	// 	if ((state_transition->state == entity->current_state) &&
-	// 		(state_transition->action == entity->current_action) &&
-	// 		(state_transition->event == entity->current_event || state_transition->event == EVENT_ANY)) {
-	// 		entity->current_action = state_transition->function(entity);
-	// 		break;
-	// 	}
-	// }
 }
 
 internal u32 AddEntity(PlaygroundState* playground_state, World* world, EntityType type, TilePosition* tile_position)

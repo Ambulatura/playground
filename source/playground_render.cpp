@@ -312,54 +312,137 @@ internal RenderGroup* AllocateRenderGroup(PlaygroundMemoryArena* arena, u32 size
 	return render_group;
 }
 
-internal u8* PushRenderGroupElement(RenderGroup* render_group, u32 size)
+#define PushRenderGroupElement(render_group, type) (type*)PushRenderGroupElement_(render_group, sizeof(type), RENDER_GROUP_ELEMENT_TYPE_##type)
+internal void* PushRenderGroupElement_(RenderGroup* render_group, u32 size, RenderGroupElementType type)
 {
+	size += sizeof(RenderGroupElementHeader);
+	
 	ASSERT(render_group->buffer_size + size < render_group->max_buffer_size);
-
-	u8* render_group_element = render_group->base_buffer + render_group->buffer_size;
+	
+	RenderGroupElementHeader* render_group_element_header = (RenderGroupElementHeader*)(render_group->base_buffer + render_group->buffer_size);
+	render_group_element_header->type = type;
+	
+	void* render_group_element = (u8*)render_group_element_header + sizeof(*render_group_element_header);
 	
 	render_group->buffer_size += size;
 
 	return render_group_element;
 }
 
-internal void PushBitmap(RenderGroup* render_group, Bitmap* bitmap, v2 offset, v2 align, v4 color, b32 flip_horizontally=false)
+internal void BitmapCall(RenderGroup* render_group, Bitmap* bitmap, v2 offset, v2 align, v4 color, b32 flip_horizontally=false)
 {
-	RenderGroupElementBitmap* render_group_element =
-		(RenderGroupElementBitmap*)PushRenderGroupElement(render_group, sizeof(RenderGroupElementBitmap));
+	RenderGroupElementBitmap* render_group_element = PushRenderGroupElement(render_group, RenderGroupElementBitmap);
 	
 	if (render_group_element) {
-		render_group_element->type = RenderGroupElementType::RENDER_GROUP_ELEMENT_TYPE_BITMAP;
 		render_group_element->bitmap = bitmap;
 		render_group_element->flip_horizontally = flip_horizontally;
 		render_group_element->spec.position = render_group->position;
 		align = v2(flip_horizontally ? bitmap->width - align.x : align.x,
 				   align.y);
 		render_group_element->spec.offset = render_group->meters_to_pixels * v2(offset.x, -offset.y) - align;
-		render_group_element->spec.color = color;
+		render_group_element->color = color;
 	}
 }
 
-internal void PushRectangle(RenderGroup* render_group, v2 offset, v2 dimension, v4 color)
+internal void RectangleCall(RenderGroup* render_group, v2 offset, v2 dimension, v4 color)
 {
-	RenderGroupElementRectangle* render_group_element =
-		(RenderGroupElementRectangle*)PushRenderGroupElement(render_group, sizeof(RenderGroupElementRectangle));
+	RenderGroupElementRectangle* render_group_element = PushRenderGroupElement(render_group, RenderGroupElementRectangle);
 	
 	if (render_group_element) {
-		render_group_element->type = RenderGroupElementType::RENDER_GROUP_ELEMENT_TYPE_RECTANGLE;
 		render_group_element->dimension = render_group->meters_to_pixels * dimension;
 		render_group_element->spec.position = render_group->position;
 		render_group_element->spec.offset = render_group->meters_to_pixels * v2(offset.x, -offset.y);
-		render_group_element->spec.color = color;
+		render_group_element->color = color;
 	}
 }
 
-internal v2 GetScreenPosition(RenderGroup* render_group, ElementSpec* spec, v2 screen_center)
+internal void RectangleOutlineCall(RenderGroup* render_group, v2 offset, v2 dimension, v4 color)
 {
-	v2 entity_position = *(spec->position);
-			
-	v2 entity_center = v2(screen_center.x + spec->offset.x + render_group->meters_to_pixels * entity_position.x,
-						  screen_center.y + spec->offset.y - render_group->meters_to_pixels * entity_position.y);
+	f32 thickness = 0.1f;
+	v2 half_dimension = 0.5f * dimension;
+	
+	RectangleCall(render_group,
+				  v2(offset.x, offset.y + half_dimension.y),
+				  v2(dimension.x, thickness), color);
+	RectangleCall(render_group,
+				  v2(offset.x, offset.y - half_dimension.y),
+				  v2(dimension.x, thickness), color);
 
-	return entity_center;
+	RectangleCall(render_group,
+				  v2(offset.x + half_dimension.x, offset.y),
+				  v2(thickness, dimension.y), color);
+	RectangleCall(render_group,
+				  v2(offset.x - half_dimension.x, offset.y),
+				  v2(thickness, dimension.y), color);
+}
+
+internal void ClearCall(RenderGroup* render_group, v4 color)
+{
+	RenderGroupElementClear* render_group_element = PushRenderGroupElement(render_group, RenderGroupElementClear);
+	
+	if (render_group_element) {
+		render_group_element->color = color;
+	}
+}
+
+internal v2 GetScreenPosition(RenderGroup* render_group, RenderElementSpec* spec, v2 screen_center)
+{
+	v2 position = *(spec->position);
+			
+	v2 center_position = v2(screen_center.x + spec->offset.x + render_group->meters_to_pixels * position.x,
+							screen_center.y + spec->offset.y - render_group->meters_to_pixels * position.y);
+
+	return center_position;
+}
+
+internal void RenderGroupToTargetBuffer(RenderGroup* render_group, Bitmap* target_buffer, v2 center)
+{
+	for (u32 address = 0;
+		 address < render_group->buffer_size;
+		 ) {
+		RenderGroupElementHeader* element_header = (RenderGroupElementHeader*)(render_group->base_buffer + address);
+		address += sizeof(*element_header);
+		
+		void* element = (u8*)element_header + sizeof(*element_header);
+		switch (element_header->type) {
+			case RENDER_GROUP_ELEMENT_TYPE_RenderGroupElementBitmap: {
+				RenderGroupElementBitmap* render_group_element = (RenderGroupElementBitmap*)element;
+
+				v2 position = GetScreenPosition(render_group, &render_group_element->spec, center);
+
+				DrawBitmap(target_buffer, render_group_element->bitmap,
+						   position.x, position.y, render_group_element->flip_horizontally, render_group_element->color);
+
+				address += sizeof(*render_group_element);
+			} break;
+
+			case RenderGroupElementType::RENDER_GROUP_ELEMENT_TYPE_RenderGroupElementRectangle: {
+				RenderGroupElementRectangle* render_group_element = (RenderGroupElementRectangle*)element;
+
+				v2 position = GetScreenPosition(render_group, &render_group_element->spec, center);
+				v2 half_dimension = 0.5f * render_group_element->dimension;
+
+				DrawRectangle(target_buffer,
+							  position - half_dimension,
+							  position + half_dimension,
+							  render_group_element->color);
+
+				address += sizeof(*render_group_element);
+			} break;
+
+			case RenderGroupElementType::RENDER_GROUP_ELEMENT_TYPE_RenderGroupElementClear: {
+				RenderGroupElementClear* render_group_element = (RenderGroupElementClear*)element;
+
+				DrawRectangle(target_buffer,
+							  v2(),
+							  v2((f32)target_buffer->width, (f32)target_buffer->height),
+							  render_group_element->color);
+
+				address += sizeof(*render_group_element);
+			} break;
+
+			INVALID_DEFAULT_CASE;
+		};
+
+	}
 }
