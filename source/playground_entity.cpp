@@ -1,29 +1,31 @@
 internal AnimationGroup* MakeAnimationGroup(PlaygroundState* playground_state,
-											u32 animation_count, f32 duration, AnimationType group_type,
-											Bitmap** sprites, u32* frame_counts)
+											 AnimationType group_type,
+											 u32 total_animation_count)
 {
 	AnimationGroup* animation_group = PushStruct(&playground_state->arena, AnimationGroup);
-	animation_group->animation_count = animation_count;
-	animation_group->animations = PushArray(&playground_state->arena, animation_group->animation_count, Animation);
+	animation_group->animation_count = 0;
+	animation_group->total_animation_count = total_animation_count;
+	animation_group->animations = PushArray(&playground_state->arena, animation_group->total_animation_count, Animation);
 	animation_group->group_type = group_type;
-	u32 last_frame_count = 0;
-
-	for (u32 animation_index = 0; animation_index < animation_group->animation_count; ++animation_index) {
-		Animation* animation = animation_group->animations + animation_index;
-		animation->duration = duration;
-		animation->total_elapsed_time = 0.0f;
-
-		u32 frame_count = frame_counts[animation_index];
-		animation->frame_count = frame_count;
-		for (u32 frame_index = 0; frame_index < animation->frame_count; ++frame_index) {
-			AnimationFrame* frame = animation->frames + frame_index;
-			frame->sprite = sprites[frame_index + last_frame_count];
-		}
-
-		last_frame_count = animation->frame_count;
-	}
 
 	return animation_group;
+}
+
+internal void AddAnimationToAnimationGroup(AnimationGroup* animation_group, Bitmap** sprites, f32 duration, u32 frame_count)
+{
+	ASSERT(animation_group->animation_count <
+		   animation_group->total_animation_count);
+
+	Animation* animation = animation_group->animations +
+		animation_group->animation_count++;
+	animation->duration = duration;
+	animation->frame_count = frame_count;
+	animation->total_elapsed_time = 0.0f;
+
+	for (u32 frame_index = 0; frame_index < animation->frame_count; ++frame_index) {
+		AnimationFrame* frame = animation->frames + frame_index;
+		frame->sprite = sprites[frame_index];
+	}
 }
 
 internal void AddAnimationGroup(Entity* entity, AnimationGroup* animation_group)
@@ -35,17 +37,32 @@ internal void AddAnimationGroup(Entity* entity, AnimationGroup* animation_group)
 	entity->animation_group_count++;
 }
 
-internal CollisionVolumeGroup* MakeCollisionVolumeGroup(PlaygroundMemoryArena* arena, v2 dimension)
+internal CollisionVolumeGroup* MakeCollisionVolumeGroup(PlaygroundMemoryArena* arena, u32 total_volume_count=1)
 {
 	CollisionVolumeGroup* volume_group = PushStruct(arena, CollisionVolumeGroup);
-	volume_group->volume_count = 1;
-	volume_group->volumes = PushArray(arena, volume_group->volume_count, CollisionVolume);
-	volume_group->total_volume.offset_position = v2(0.5f * dimension.x,
-													0.5f * dimension.y);
-	volume_group->total_volume.dimension = dimension;
-	volume_group->volumes[0] = volume_group->total_volume;
+	volume_group->volume_count = 0;
+	volume_group->total_volume_count = total_volume_count;
+	volume_group->volumes = PushArray(arena, volume_group->total_volume_count, CollisionVolume);
+	// volume_group->total_volume.offset_position = v2(0.5f * dimension.x,
+	// 												0.5f * dimension.y);
+	// volume_group->total_volume.dimension = dimension;
+	// volume_group->volumes[0] = volume_group->total_volume;
 
 	return volume_group;
+}
+
+internal void AddCollisionVolumeToCollisionVolumeGroup(CollisionVolumeGroup* collision_volume_group, v2 dimension, v2 offset_position)
+{
+	ASSERT(collision_volume_group->volume_count < collision_volume_group->total_volume_count);
+	
+	CollisionVolume* collision_volume = collision_volume_group->volumes + collision_volume_group->volume_count++;
+	collision_volume->offset_position = offset_position;
+	// v2(0.5f * dimension.x,
+	//    0.5f * dimension.y);
+	collision_volume->dimension = dimension;
+	collision_volume_group->total_volume.offset_position += collision_volume->offset_position;
+	collision_volume_group->total_volume.dimension += dimension;
+	// volume_group->volumes[0] = volume_group->total_volume;
 }
 
 inline Entity* GetEntity(World* world, u32 entity_index);
@@ -102,7 +119,9 @@ inline void MakeEntitySpatialAndAddToTileMap(PlaygroundState* playground_state, 
 inline v2 GetEntityAlignedPosition(Entity* entity)
 {
 	v2 result = entity->position +
-		entity->collision_volume_group->total_volume.offset_position;
+		entity->collision_volume_group->volumes[0].offset_position;
+
+		// entity->collision_volume_group->total_volume.offset_position;
 
 	return result;
 }
@@ -588,28 +607,6 @@ internal u32 AddEntity(PlaygroundState* playground_state, World* world, EntityTy
 	return entity_index;
 }
 
-// internal u32 AddAlignedEntity(World* world, EntityType type, TilePosition* tile_position, f32 width, f32 height)
-// {
-// 	u32 entity_index = 0;
-
-// 	// if (tile_position) {
-// 	// 	TilePosition new_tile_position =
-// 	// 		MapIntoTilePosition(*tile_position,
-// 	// 							v2(0.5f * width, 0.5f * height),
-// 	// 							world->tile_side_in_meters);
-// 	// 	entity_index = AddEntity(world, type, &new_tile_position);
-// 	// }
-// 	// else {
-// 		entity_index = AddEntity(world, type, tile_position);
-// 	// }
-
-// 	Entity* entity = GetEntity(world, entity_index);
-// 	entity->width = width;
-// 	entity->height = height;
-
-// 	return entity_index;
-// }
-
 inline Entity* GetEntity(World* world, u32 entity_index)
 {
 	ASSERT(entity_index < world->entity_count);
@@ -632,7 +629,26 @@ internal u32 AddBall(PlaygroundState* playground_state)
 	Entity* entity = GetEntity(world, entity_index);
 
 	entity->collision_volume_group =
-		MakeCollisionVolumeGroup(&playground_state->arena, dimension);
+		MakeCollisionVolumeGroup(&playground_state->arena);
+	AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
+											 dimension, dimension * 0.5f);
+	AddFlags(entity, EntityFlag::COLLIDES_FLAG | EntityFlag::MOVEABLE_FLAG);
+
+	return entity_index;
+}
+
+internal u32 AddSword(PlaygroundState* playground_state)
+{
+	World* world = &playground_state->world;
+	v2 dimension = v2(0.5f, 0.5f);
+
+	u32 entity_index = AddEntity(playground_state, world, EntityType::SWORD_TYPE, 0);
+	Entity* entity = GetEntity(world, entity_index);
+
+	entity->collision_volume_group =
+		MakeCollisionVolumeGroup(&playground_state->arena);
+	AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
+											 dimension, dimension * 0.5f);
 	AddFlags(entity, EntityFlag::COLLIDES_FLAG | EntityFlag::MOVEABLE_FLAG);
 
 	return entity_index;
@@ -651,8 +667,12 @@ internal u32 AddPlayer(PlaygroundState* playground_state)
 	Entity* entity = GetEntity(world, entity_index);
 
 	entity->collision_volume_group =
-		MakeCollisionVolumeGroup(&playground_state->arena, dimension);
-
+		MakeCollisionVolumeGroup(&playground_state->arena, 2);
+	AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
+											 dimension, dimension * 0.5f);
+	AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
+											 v2(0.5f, 0.5f), v2(dimension.x, dimension.y) + v2(0.5f, 0.5f) * 0.5f);
+	
 	AddFlags(entity, EntityFlag::COLLIDES_FLAG | EntityFlag::MOVEABLE_FLAG);
 
 	entity->ball_index = AddBall(playground_state);
@@ -666,7 +686,6 @@ internal u32 AddPlayer(PlaygroundState* playground_state)
 	AddAnimationGroup(entity, playground_state->player_attack_1_animations);
 
 	entity->current_action = FALL_ACTION;
-
 
 	return entity_index;
 }
@@ -682,7 +701,10 @@ internal u32 AddFamiliar(PlaygroundState* playground_state)
 	Entity* entity = GetEntity(world, entity_index);
 
 	entity->collision_volume_group =
-		MakeCollisionVolumeGroup(&playground_state->arena, dimension);
+		MakeCollisionVolumeGroup(&playground_state->arena);
+	AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
+											 dimension, dimension * 0.5f);
+	
 	AddFlags(entity, EntityFlag::MOVEABLE_FLAG);
 
 	AddAnimationGroup(entity, playground_state->familiar_idle_animations);
@@ -703,7 +725,10 @@ internal u32 AddWall(PlaygroundState* playground_state, i32 tile_x, i32 tile_y, 
 	Entity* entity = GetEntity(world, entity_index);
 
 	entity->collision_volume_group =
-		MakeCollisionVolumeGroup(&playground_state->arena, dimension);
+		MakeCollisionVolumeGroup(&playground_state->arena);
+	AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
+											 dimension, dimension * 0.5f);
+
 	AddFlags(entity, EntityFlag::COLLIDES_FLAG);
 
 	return entity_index;
@@ -721,7 +746,10 @@ internal u32 AddMonster(PlaygroundState* playground_state, i32 tile_x, i32 tile_
 	Entity* entity = GetEntity(world, entity_index);
 
 	entity->collision_volume_group =
-		MakeCollisionVolumeGroup(&playground_state->arena, dimension);
+		MakeCollisionVolumeGroup(&playground_state->arena);
+	AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
+											 dimension, dimension * 0.5f);
+
 	AddFlags(entity, EntityFlag::COLLIDES_FLAG);
 
 	return entity_index;
@@ -742,14 +770,14 @@ internal AnimationGroup* UpdateAnimationGroup(Entity* entity, u32 animation_grou
 		// entity_animation->frame_index = (u32)(entity_animation->total_elapsed_time / seconds_per_frame);
 
 		entity->state_time += delta_time_for_frame;
-		entity_animation->frame_index = (u32)(entity->state_time / seconds_per_frame);
+		entity->animation_frame_index = (u32)(entity->state_time / seconds_per_frame);
 
 		// if (entity_animation->total_elapsed_time >= entity_animation->duration) {
 		if (entity->state_time >= entity_animation->duration) {
 		
 			// entity_animation->total_elapsed_time = 0.0;
 			entity->state_time = 0.0f;
-			entity_animation->frame_index = 0;
+			entity->animation_frame_index = 0;
 		}
 	}
 

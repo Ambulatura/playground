@@ -123,12 +123,10 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				&playground_state->player_idle[2],
 				&playground_state->player_idle[3]
 			};
-			u32 player_idle_frame_counts[1] = { 4 };
-			playground_state->player_idle_animations = MakeAnimationGroup(playground_state,
-																		  1, 0.4f,
-																		  AnimationType::IDLE_ANIMATION_TYPE,
-																		  player_idle_sprites, player_idle_frame_counts);
-
+			playground_state->player_idle_animations = MakeAnimationGroup(playground_state, AnimationType::IDLE_ANIMATION_TYPE, 1);
+			AddAnimationToAnimationGroup(playground_state->player_idle_animations,
+										 player_idle_sprites, 0.4f, 4);
+			
 			// NOTE(SSJSR): Run state.
 
 			playground_state->player_run[0] = LoadBmp("adventurer/run/adventurer-run3-00.bmp", memory->PlaygroundReadFile, 25, 22);
@@ -171,11 +169,10 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				&playground_state->player_run[4],
 				&playground_state->player_run[5]
 			};
-			u32 player_run_frame_counts[1] = { 6 };
 			playground_state->player_run_animations = MakeAnimationGroup(playground_state,
-																		 1, 0.6f,
-																		 AnimationType::RUN_ANIMATION_TYPE,
-																		 player_run_sprites, player_run_frame_counts);
+																		 AnimationType::RUN_ANIMATION_TYPE, 1);
+			AddAnimationToAnimationGroup(playground_state->player_run_animations,
+										 player_run_sprites, 0.6f, 6);
 
 			// NOTE(SSJSR): Jump state.
 
@@ -197,11 +194,10 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				&playground_state->player_jump[0],
 				&playground_state->player_jump[1]
 			};
-			u32 player_jump_frame_counts[1] = { 2 };
 			playground_state->player_jump_animations = MakeAnimationGroup(playground_state,
-																		  1, 0.2f,
-																		  AnimationType::JUMP_ANIMATION_TYPE,
-																		  player_jump_sprites, player_jump_frame_counts);
+																		  AnimationType::JUMP_ANIMATION_TYPE, 1);
+			AddAnimationToAnimationGroup(playground_state->player_jump_animations,
+										 player_jump_sprites, 0.2f, 2);
 
 			// NOTE(SSJSR): Jump 2 state.
 
@@ -233,11 +229,10 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				&playground_state->player_jump_2[2],
 				&playground_state->player_jump_2[3]
 			};
-			u32 player_jump_2_frame_counts[1] = { 4 };
 			playground_state->player_jump_2_animations = MakeAnimationGroup(playground_state,
-																			1, 0.2f,
-																			AnimationType::JUMP_2_ANIMATION_TYPE,
-																			player_jump_2_sprites, player_jump_2_frame_counts);
+																			AnimationType::JUMP_2_ANIMATION_TYPE, 1);
+			AddAnimationToAnimationGroup(playground_state->player_jump_2_animations,
+										 player_jump_2_sprites, 0.2f, 4);
 
 			// NOTE(SSJSR): Fall state.
 
@@ -257,8 +252,10 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				&playground_state->player_fall[0],
 				&playground_state->player_fall[1],
 			};
-			u32 player_fall_frame_counts[1] = { 2 };
-			playground_state->player_fall_animations = MakeAnimationGroup(playground_state, 1, 0.2f, AnimationType::FALL_ANIMATION_TYPE, player_fall_sprites, player_fall_frame_counts);
+			playground_state->player_fall_animations = MakeAnimationGroup(playground_state,
+																		  AnimationType::FALL_ANIMATION_TYPE, 1);
+			AddAnimationToAnimationGroup(playground_state->player_fall_animations,
+										 player_fall_sprites, 0.2f, 2);
 
 			// NOTE(SSJSR): Wall slide state.
 
@@ -278,11 +275,11 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				&playground_state->player_wall_slide[0],
 				&playground_state->player_wall_slide[1],
 			};
-			u32 player_wall_slide_frame_counts[1] = { 2 };
 			playground_state->player_wall_slide_animations = MakeAnimationGroup(playground_state,
-																				1, 0.2f,
-																				AnimationType::WALL_SLIDE_ANIMATION_TYPE,
-																				player_wall_slide_sprites, player_wall_slide_frame_counts);
+																				AnimationType::WALL_SLIDE_ANIMATION_TYPE, 1);
+
+			AddAnimationToAnimationGroup(playground_state->player_wall_slide_animations,
+										 player_wall_slide_sprites, 0.2f, 2);
 
 			// NOTE(SSJSR): Attack 1  state.
 
@@ -320,11 +317,10 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				&playground_state->player_attack_1[3],
 				&playground_state->player_attack_1[4]
 			};
-			u32 player_attack_1_frame_counts[1] = { 5 };
 			playground_state->player_attack_1_animations = MakeAnimationGroup(playground_state,
-																			  1, 0.4f,
-																			  AnimationType::ATTACK_1_ANIMATION_TYPE,
-																			  player_attack_1_sprites, player_attack_1_frame_counts);
+																			  AnimationType::ATTACK_1_ANIMATION_TYPE, 1);
+			AddAnimationToAnimationGroup(playground_state->player_attack_1_animations,
+										 player_attack_1_sprites, 0.4f, 5);
 
 			// NOTE(SSJSR): Cast state.
 
@@ -368,11 +364,10 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				&playground_state->familiar_idle[2],
 				&playground_state->familiar_idle[3]
 			};
-			u32 familiar_idle_frame_counts[1] = { 4 };
 			playground_state->familiar_idle_animations = MakeAnimationGroup(playground_state,
-																			1, 0.4f,
-																			AnimationType::IDLE_ANIMATION_TYPE,
-																			familiar_idle_sprites, familiar_idle_frame_counts);
+																			AnimationType::IDLE_ANIMATION_TYPE, 1);
+			AddAnimationToAnimationGroup(playground_state->familiar_idle_animations,
+										 familiar_idle_sprites, 0.4f, 4);
 
 			// NOTE(SSJSR): Run state.
 
@@ -440,26 +435,29 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 															  (i32)(playground_state->familiar_run_dust[5].width * familiar_scale),
 															  (i32)(playground_state->familiar_run_dust[5].height * familiar_scale));
 
-			Bitmap* familiar_run_sprites[12] = {
+			Bitmap* familiar_run_sprites[6] = {
 				&playground_state->familiar_run[0],
 				&playground_state->familiar_run[1],
 				&playground_state->familiar_run[2],
 				&playground_state->familiar_run[3],
 				&playground_state->familiar_run[4],
 				&playground_state->familiar_run[5],
-
+			};
+			
+			Bitmap* familiar_run_dust_sprites[6] = {
 				&playground_state->familiar_run_dust[0],
 				&playground_state->familiar_run_dust[1],
 				&playground_state->familiar_run_dust[2],
 				&playground_state->familiar_run_dust[3],
 				&playground_state->familiar_run_dust[4],
-				&playground_state->familiar_run_dust[5]
+				&playground_state->familiar_run_dust[5],
 			};
-			u32 familiar_run_frame_counts[2] = { 6, 6 };
 			playground_state->familiar_run_animations = MakeAnimationGroup(playground_state,
-																		   2, 0.6f,
-																		   AnimationType::RUN_ANIMATION_TYPE,
-																		   familiar_run_sprites, familiar_run_frame_counts);
+																		   AnimationType::RUN_ANIMATION_TYPE, 2);
+			AddAnimationToAnimationGroup(playground_state->familiar_run_animations,
+										 familiar_run_sprites, 0.6f, 6);
+			AddAnimationToAnimationGroup(playground_state->familiar_run_animations,
+										 familiar_run_dust_sprites, 0.6f, 6);
 		}
 
 		world->player_entity_index =
@@ -578,17 +576,25 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 						   entity_index, entity, input->delta_time_for_frame, &move_feature);
 
 				// RectangleCall(render_group, v2(), dimension, v4(1.0f, 0.5f, 1.0f, 1.0f));
+				CollisionVolumeGroup* collision_volume_group = entity->collision_volume_group;
+				for (u32 volume_index = 0; volume_index < collision_volume_group->volume_count; ++volume_index) {
+					CollisionVolume* collision_volume = collision_volume_group->volumes + volume_index;
+					RectangleCall(render_group,
+								  collision_volume_group->volumes[volume_index].offset_position - collision_volume_group->volumes[0].offset_position,
+								  collision_volume->dimension,
+								  v4(1.0f * volume_index, 0.5f * volume_index, 1.0f * volume_index, 1.0f));
+				}
 
 				if (entity_animation_group) {
 					for (u32 animation_index = 0; animation_index < entity_animation_group->animation_count; ++animation_index) {
 						Animation* entity_animation = entity_animation_group->animations + animation_index;
-						Bitmap* sprite = entity_animation->frames[entity_animation->frame_index].sprite;
+						Bitmap* sprite = entity_animation->frames[entity->animation_frame_index].sprite;
 						b32 flip_horizontally = entity->facing_direction == 1 ?
 							true : false;
 
-						BitmapCall(render_group, sprite,
-								   v2(), v2((f32)sprite->align_x, (f32)sprite->align_y),
-								   v4(1.0f, 0.0f, 1.0f, 1.0f), flip_horizontally);
+						// BitmapCall(render_group, sprite,
+						// 		   v2(), v2((f32)sprite->align_x, (f32)sprite->align_y),
+						// 		   v4(1.0f, 0.0f, 1.0f, 1.0f), flip_horizontally);
 					}
 				}
 			}
@@ -605,7 +611,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 				if (entity_animation_group) {
 					for (u32 animation_index = 0; animation_index < entity_animation_group->animation_count; ++animation_index) {
 						Animation* entity_animation = entity_animation_group->animations + animation_index;
-						Bitmap* sprite = entity_animation->frames[entity_animation->frame_index].sprite;
+						Bitmap* sprite = entity_animation->frames[entity->animation_frame_index].sprite;
 						b32 flip_horizontally = player_entity->facing_direction == 1 ?
 							true : false;
 

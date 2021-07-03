@@ -9,6 +9,7 @@ enum EntityType
 	WALL_TYPE,
 	MONSTER_TYPE,
 	BALL_TYPE,
+	SWORD_TYPE,
 };
 
 enum EntityFlag
@@ -65,7 +66,6 @@ struct Animation
 	f32 duration;
 	f32 total_elapsed_time;
 	
-	u32 frame_index;
 	u32 frame_count;
 	AnimationFrame frames[16];
 };
@@ -74,6 +74,7 @@ struct AnimationGroup
 {
 	AnimationType group_type;
 	u32 animation_count;
+	u32 total_animation_count;
 	Animation* animations;
 };
 
@@ -88,6 +89,7 @@ struct CollisionVolumeGroup
 	CollisionVolume total_volume;
 
 	u32 volume_count;
+	u32 total_volume_count;
 	CollisionVolume* volumes;
 };
 
@@ -107,6 +109,8 @@ struct Entity
 	TilePosition tile_position;
 
 	u32 ball_index;
+	u32 sword_index;
+	
 	f32 distance_limit;
 
 	u32 animation_group_count;
@@ -115,6 +119,7 @@ struct Entity
 	CollisionVolumeGroup* collision_volume_group;
 
 	f32 state_time;
+	u32 animation_frame_index;
 
 	u32 last_action;
 	u32 current_action;
