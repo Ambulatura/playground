@@ -46,6 +46,7 @@ enum AnimationType
 	FALL_ANIMATION_TYPE,
 	WALL_SLIDE_ANIMATION_TYPE,
 	ATTACK_1_ANIMATION_TYPE,
+	ATTACK_2_ANIMATION_TYPE,
 	CAST_ANIMATION_TYPE,
 
 	MAX_ANIMATION_TYPE,
@@ -54,9 +55,6 @@ enum AnimationType
 struct AnimationFrame
 {
 	Bitmap* sprite;
-
-	// TODO(SSJSR): Can we use entities for hitboxes?
-	u32 hitboxes[4];
 };
 
 struct Animation

@@ -322,6 +322,53 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 			AddAnimationToAnimationGroup(playground_state->player_attack_1_animations,
 										 player_attack_1_sprites, 0.4f, 5);
 
+			// NOTE(SSJSR): Attack 1  state.
+
+			playground_state->player_attack_2[0] = LoadBmp("adventurer/attack/adventurer-attack2-00.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_attack_2[1] = LoadBmp("adventurer/attack/adventurer-attack2-01.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_attack_2[2] = LoadBmp("adventurer/attack/adventurer-attack2-02.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_attack_2[3] = LoadBmp("adventurer/attack/adventurer-attack2-03.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_attack_2[4] = LoadBmp("adventurer/attack/adventurer-attack2-04.bmp", memory->PlaygroundReadFile, 25, 22);
+			playground_state->player_attack_2[5] = LoadBmp("adventurer/attack/adventurer-attack2-05.bmp", memory->PlaygroundReadFile, 25, 22);
+
+			playground_state->player_attack_2[0] = ScaleBmp(&playground_state->arena,
+															&playground_state->player_attack_2[0],
+															(i32)(playground_state->player_attack_2[0].width * player_scale),
+															(i32)(playground_state->player_attack_2[0].height * player_scale));
+			playground_state->player_attack_2[1] = ScaleBmp(&playground_state->arena,
+															&playground_state->player_attack_2[1],
+															(i32)(playground_state->player_attack_2[1].width * player_scale),
+															(i32)(playground_state->player_attack_2[1].height * player_scale));
+			playground_state->player_attack_2[2] = ScaleBmp(&playground_state->arena,
+															&playground_state->player_attack_2[2],
+															(i32)(playground_state->player_attack_2[2].width * player_scale),
+															(i32)(playground_state->player_attack_2[2].height * player_scale));
+			playground_state->player_attack_2[3] = ScaleBmp(&playground_state->arena,
+															&playground_state->player_attack_2[3],
+															(i32)(playground_state->player_attack_2[3].width * player_scale),
+															(i32)(playground_state->player_attack_2[3].height * player_scale));
+			playground_state->player_attack_2[4] = ScaleBmp(&playground_state->arena,
+															&playground_state->player_attack_2[4],
+															(i32)(playground_state->player_attack_2[4].width * player_scale),
+															(i32)(playground_state->player_attack_2[4].height * player_scale));
+			playground_state->player_attack_2[5] = ScaleBmp(&playground_state->arena,
+															&playground_state->player_attack_2[5],
+															(i32)(playground_state->player_attack_2[5].width * player_scale),
+															(i32)(playground_state->player_attack_2[5].height * player_scale));
+
+			Bitmap* player_attack_2_sprites[6] = {
+				&playground_state->player_attack_2[0],
+				&playground_state->player_attack_2[1],
+				&playground_state->player_attack_2[2],
+				&playground_state->player_attack_2[3],
+				&playground_state->player_attack_2[4],
+				&playground_state->player_attack_2[5],
+			};
+			playground_state->player_attack_2_animations = MakeAnimationGroup(playground_state,
+																			  AnimationType::ATTACK_2_ANIMATION_TYPE, 1);
+			AddAnimationToAnimationGroup(playground_state->player_attack_2_animations,
+										 player_attack_2_sprites, 0.5f, 6);
+
 			// NOTE(SSJSR): Cast state.
 
 			// playground_state->player_cast_00 = LoadBmp("adventurer/cast/adventurer-cast-00.bmp", memory->PlaygroundReadFile, 25, 22);
@@ -470,6 +517,33 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 		AddMonster(playground_state, world->tile_count_x - 7, 10);
 		AddFamiliar(playground_state);
 
+		playground_state->attack_1_collision_volume_group =
+			MakeCollisionVolumeGroup(&playground_state->arena, 5);
+		AddCollisionVolumeToCollisionVolumeGroup(playground_state->attack_1_collision_volume_group,
+												 v2(0.125f, 1.1f));
+		AddCollisionVolumeToCollisionVolumeGroup(playground_state->attack_1_collision_volume_group,
+												 v2(0.125f, 1.0f), v2(0.125f, 0.05f));
+		AddCollisionVolumeToCollisionVolumeGroup(playground_state->attack_1_collision_volume_group,
+												 v2(0.125f, 0.9f), v2(0.250f, 0.10f));
+		AddCollisionVolumeToCollisionVolumeGroup(playground_state->attack_1_collision_volume_group,
+												 v2(0.125f, 0.75f), v2(0.375f, 0.15f));
+		AddCollisionVolumeToCollisionVolumeGroup(playground_state->attack_1_collision_volume_group,
+												 v2(0.125f * 0.5f, 0.60f), v2(0.500f, 0.20f));
+
+		playground_state->attack_2_collision_volume_group =
+			MakeCollisionVolumeGroup(&playground_state->arena, 5);
+		// AddCollisionVolumeToCollisionVolumeGroup(playground_state->attack_2_collision_volume_group,
+		// 										 v2(0.125f, 1.1f));
+		// AddCollisionVolumeToCollisionVolumeGroup(playground_state->attack_2_collision_volume_group,
+		// 										 v2(0.125f, 1.0f), v2(0.125f, 0.05f));
+		AddCollisionVolumeToCollisionVolumeGroup(playground_state->attack_2_collision_volume_group,
+												 v2(0.125f, 0.8f), v2(0.250f, 0.05f));
+		AddCollisionVolumeToCollisionVolumeGroup(playground_state->attack_2_collision_volume_group,
+												 v2(0.125f, 0.75f), v2(0.375f, 0.15f));
+		AddCollisionVolumeToCollisionVolumeGroup(playground_state->attack_2_collision_volume_group,
+												 v2(0.125f * 0.5f, 0.60f), v2(0.500f, 0.20f));
+
+
 		world->camera.tile_x = world->tile_count_x / 2;
 		world->camera.tile_y = world->tile_count_y / 2;
 		world->camera.xy = v2(0.0f, 0.0f);
@@ -576,15 +650,7 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 						   entity_index, entity, input->delta_time_for_frame, &move_feature);
 
 				// RectangleCall(render_group, v2(), dimension, v4(1.0f, 0.5f, 1.0f, 1.0f));
-				CollisionVolumeGroup* collision_volume_group = entity->collision_volume_group;
-				for (u32 volume_index = 0; volume_index < collision_volume_group->volume_count; ++volume_index) {
-					CollisionVolume* collision_volume = collision_volume_group->volumes + volume_index;
-					RectangleCall(render_group,
-								  collision_volume_group->volumes[volume_index].offset_position - collision_volume_group->volumes[0].offset_position,
-								  collision_volume->dimension,
-								  v4(1.0f * volume_index, 0.5f * volume_index, 1.0f * volume_index, 1.0f));
-				}
-
+				
 				if (entity_animation_group) {
 					for (u32 animation_index = 0; animation_index < entity_animation_group->animation_count; ++animation_index) {
 						Animation* entity_animation = entity_animation_group->animations + animation_index;
@@ -592,12 +658,26 @@ extern "C" PLAYGROUND_UPDATE_AND_RENDER(PlaygroundUpdateAndRender)
 						b32 flip_horizontally = entity->facing_direction == 1 ?
 							true : false;
 
-						// BitmapCall(render_group, sprite,
-						// 		   v2(), v2((f32)sprite->align_x, (f32)sprite->align_y),
-						// 		   v4(1.0f, 0.0f, 1.0f, 1.0f), flip_horizontally);
+						BitmapCall(render_group, sprite,
+								   v2(), v2((f32)sprite->align_x, (f32)sprite->align_y),
+								   v4(1.0f, 0.0f, 1.0f, 1.0f), flip_horizontally);
 					}
 				}
 			}
+			
+			else if (entity->type == EntityType::SWORD_TYPE) {
+				CollisionVolumeGroup* collision_volume_group = entity->collision_volume_group;
+				for (u32 volume_index = 0; volume_index < collision_volume_group->volume_count; ++volume_index) {
+					CollisionVolume* collision_volume = collision_volume_group->volumes + volume_index;
+					RectangleCall(render_group,
+								  collision_volume_group->volumes[volume_index].offset_position - collision_volume_group->volumes[0].offset_position,
+								  collision_volume->dimension,
+								  v4(1.0f, 0.5f, 1.0f, 1.0f));
+				}
+
+				
+			}
+			
 			else if (entity->type == EntityType::FAMILIAR_TYPE) {
 				Entity* player_entity = GetEntity(world, world->player_entity_index);
 

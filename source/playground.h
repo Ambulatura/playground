@@ -25,6 +25,7 @@ struct PlaygroundState
 	Bitmap player_fall[2];
 	Bitmap player_wall_slide[2];
 	Bitmap player_attack_1[5];
+	Bitmap player_attack_2[6];
 	
 	AnimationGroup* player_idle_animations;
 	AnimationGroup* player_run_animations;
@@ -33,17 +34,7 @@ struct PlaygroundState
 	AnimationGroup* player_fall_animations;
 	AnimationGroup* player_wall_slide_animations;
 	AnimationGroup* player_attack_1_animations;
-
-	// LoadedBmp player_cast_00;
-	// LoadedBmp player_cast_01;
-	// LoadedBmp player_cast_02;
-	// LoadedBmp player_cast_03;
-
-	// LoadedBmp fireball_00;
-	// LoadedBmp fireball_01;
-	// LoadedBmp fireball_02;
-	// LoadedBmp fireball_03;
-	// LoadedBmp fireball_04;
+	AnimationGroup* player_attack_2_animations;
 
 	// NOTE(SSJSR): Familiar sprites.
 	Bitmap familiar_idle[4];
@@ -54,6 +45,9 @@ struct PlaygroundState
 	AnimationGroup* familiar_run_animations;
 	
 	Bitmap background;
+
+	CollisionVolumeGroup* attack_1_collision_volume_group;
+	CollisionVolumeGroup* attack_2_collision_volume_group;
 };
 
 struct TransientState

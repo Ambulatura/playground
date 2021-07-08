@@ -51,12 +51,12 @@ internal CollisionVolumeGroup* MakeCollisionVolumeGroup(PlaygroundMemoryArena* a
 	return volume_group;
 }
 
-internal void AddCollisionVolumeToCollisionVolumeGroup(CollisionVolumeGroup* collision_volume_group, v2 dimension, v2 offset_position)
+internal void AddCollisionVolumeToCollisionVolumeGroup(CollisionVolumeGroup* collision_volume_group, v2 dimension, v2 offset=v2())
 {
 	ASSERT(collision_volume_group->volume_count < collision_volume_group->total_volume_count);
-	
+
 	CollisionVolume* collision_volume = collision_volume_group->volumes + collision_volume_group->volume_count++;
-	collision_volume->offset_position = offset_position;
+	collision_volume->offset_position = offset + dimension * 0.5f;
 	// v2(0.5f * dimension.x,
 	//    0.5f * dimension.y);
 	collision_volume->dimension = dimension;
@@ -325,6 +325,7 @@ internal void AddCollisionPair(PlaygroundMemoryArena* arena, World* world,
 			}
 			else {
 				world->first_free_collision_pair = found->next_collision_pair;
+				found->next_collision_pair = 0;
 			}
 
 			found->next_collision_pair = world->collision_pair_hash[hash_index];
@@ -335,6 +336,28 @@ internal void AddCollisionPair(PlaygroundMemoryArena* arena, World* world,
 			found->first_entity_index = first_entity_index;
 			found->second_entity_index = second_entity_index;
 			found->can_collide = can_collide;
+		}
+	}
+}
+
+internal void ClearCollisionPairs(World* world,
+								  u32 entity_index)
+{
+	u32 hash_index = entity_index & (ARRAY_COUNT(world->collision_pair_hash) - 1);
+	for (CollisionPair** collision_pair = world->collision_pair_hash + hash_index;
+		 *collision_pair;
+		 ) {
+		if ((*collision_pair)->first_entity_index == entity_index ||
+			(*collision_pair)->second_entity_index == entity_index) {
+
+			CollisionPair* deleted_collision_pair = *collision_pair;
+			*collision_pair = (*collision_pair)->next_collision_pair;
+
+			deleted_collision_pair->next_collision_pair = world->first_free_collision_pair;
+			world->first_free_collision_pair = deleted_collision_pair;
+		}
+		else {
+			collision_pair = &(*collision_pair)->next_collision_pair;
 		}
 	}
 }
@@ -354,6 +377,11 @@ internal b32 CanCollide(World* world,
 		if (!IsFlagSet(first_entity, EntityFlag::NONSPATIAL_FLAG) &&
 			!IsFlagSet(second_entity, EntityFlag::NONSPATIAL_FLAG)) {
 			result = true;
+		}
+
+		if (first_entity->type == EntityType::PLAYER_TYPE &&
+			second_entity->type == EntityType::SWORD_TYPE) {
+			result = false;
 		}
 
 		u32 hash_index = first_entity_index & (ARRAY_COUNT(world->collision_pair_hash) - 1);
@@ -401,6 +429,19 @@ internal b32 StopsOnCollision(PlaygroundMemoryArena* arena, World* world,
 			second_entity->type == EntityType::MONSTER_TYPE) {
 			result = false;
 			AddCollisionPair(arena, world, first_entity_index, second_entity_index, result);
+		}
+
+		if (first_entity->type == EntityType::MONSTER_TYPE &&
+			second_entity->type == EntityType::SWORD_TYPE) {
+			result = false;
+			AddCollisionPair(arena, world, first_entity_index, second_entity_index, result);
+			first_entity->velocity.y = 10.0f;
+			if (second_entity->position.x > first_entity->position.x) {
+				first_entity->velocity.x = -5.0f;
+			}
+			else {
+				first_entity->velocity.x = 5.0f;
+			}
 		}
 	}
 
@@ -566,6 +607,7 @@ internal void MoveEntity(PlaygroundState* playground_state, World* world, u32 en
 
 	if (hitted) {
 		entity->current_action = WALL_SLIDE_ACTION;
+		entity->jump_count = 1;
 	}
 	else if (entity->velocity.y < 0.0f) {
 		entity->current_action = FALL_ACTION;
@@ -631,7 +673,7 @@ internal u32 AddBall(PlaygroundState* playground_state)
 	entity->collision_volume_group =
 		MakeCollisionVolumeGroup(&playground_state->arena);
 	AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
-											 dimension, dimension * 0.5f);
+											 dimension);
 	AddFlags(entity, EntityFlag::COLLIDES_FLAG | EntityFlag::MOVEABLE_FLAG);
 
 	return entity_index;
@@ -640,15 +682,24 @@ internal u32 AddBall(PlaygroundState* playground_state)
 internal u32 AddSword(PlaygroundState* playground_state)
 {
 	World* world = &playground_state->world;
-	v2 dimension = v2(0.5f, 0.5f);
+	v2 dimension = v2(0.25f, 0.25f);
 
 	u32 entity_index = AddEntity(playground_state, world, EntityType::SWORD_TYPE, 0);
 	Entity* entity = GetEntity(world, entity_index);
 
-	entity->collision_volume_group =
-		MakeCollisionVolumeGroup(&playground_state->arena);
-	AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
-											 dimension, dimension * 0.5f);
+	// entity->collision_volume_group =
+	// 	MakeCollisionVolumeGroup(&playground_state->arena, 5);
+	// AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
+	// 										 v2(0.125f, 1.1f));
+	// AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
+	// 										 v2(0.125f, 1.0f), v2(0.125f, 0.05f));
+	// AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
+	// 										 v2(0.125f, 0.9f), v2(0.250f, 0.10f));
+	// AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
+	// 										 v2(0.125f, 0.75f), v2(0.375f, 0.15f));
+	// AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
+	// 										 v2(0.125f*0.5f, 0.60f), v2(0.500f, 0.20f));
+
 	AddFlags(entity, EntityFlag::COLLIDES_FLAG | EntityFlag::MOVEABLE_FLAG);
 
 	return entity_index;
@@ -667,15 +718,14 @@ internal u32 AddPlayer(PlaygroundState* playground_state)
 	Entity* entity = GetEntity(world, entity_index);
 
 	entity->collision_volume_group =
-		MakeCollisionVolumeGroup(&playground_state->arena, 2);
+		MakeCollisionVolumeGroup(&playground_state->arena);
 	AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
-											 dimension, dimension * 0.5f);
-	AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
-											 v2(0.5f, 0.5f), v2(dimension.x, dimension.y) + v2(0.5f, 0.5f) * 0.5f);
-	
+											 dimension);
+
 	AddFlags(entity, EntityFlag::COLLIDES_FLAG | EntityFlag::MOVEABLE_FLAG);
 
 	entity->ball_index = AddBall(playground_state);
+	entity->sword_index = AddSword(playground_state);
 
 	AddAnimationGroup(entity, playground_state->player_idle_animations);
 	AddAnimationGroup(entity, playground_state->player_run_animations);
@@ -684,6 +734,7 @@ internal u32 AddPlayer(PlaygroundState* playground_state)
 	AddAnimationGroup(entity, playground_state->player_fall_animations);
 	AddAnimationGroup(entity, playground_state->player_wall_slide_animations);
 	AddAnimationGroup(entity, playground_state->player_attack_1_animations);
+	AddAnimationGroup(entity, playground_state->player_attack_2_animations);
 
 	entity->current_action = FALL_ACTION;
 
@@ -703,8 +754,8 @@ internal u32 AddFamiliar(PlaygroundState* playground_state)
 	entity->collision_volume_group =
 		MakeCollisionVolumeGroup(&playground_state->arena);
 	AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
-											 dimension, dimension * 0.5f);
-	
+											 dimension);
+
 	AddFlags(entity, EntityFlag::MOVEABLE_FLAG);
 
 	AddAnimationGroup(entity, playground_state->familiar_idle_animations);
@@ -727,7 +778,7 @@ internal u32 AddWall(PlaygroundState* playground_state, i32 tile_x, i32 tile_y, 
 	entity->collision_volume_group =
 		MakeCollisionVolumeGroup(&playground_state->arena);
 	AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
-											 dimension, dimension * 0.5f);
+											 dimension);
 
 	AddFlags(entity, EntityFlag::COLLIDES_FLAG);
 
@@ -748,7 +799,7 @@ internal u32 AddMonster(PlaygroundState* playground_state, i32 tile_x, i32 tile_
 	entity->collision_volume_group =
 		MakeCollisionVolumeGroup(&playground_state->arena);
 	AddCollisionVolumeToCollisionVolumeGroup(entity->collision_volume_group,
-											 dimension, dimension * 0.5f);
+											 dimension);
 
 	AddFlags(entity, EntityFlag::COLLIDES_FLAG);
 
@@ -774,7 +825,7 @@ internal AnimationGroup* UpdateAnimationGroup(Entity* entity, u32 animation_grou
 
 		// if (entity_animation->total_elapsed_time >= entity_animation->duration) {
 		if (entity->state_time >= entity_animation->duration) {
-		
+
 			// entity_animation->total_elapsed_time = 0.0;
 			entity->state_time = 0.0f;
 			entity->animation_frame_index = 0;
@@ -841,7 +892,7 @@ internal AnimationGroup* EntityStateControl(PlaygroundState* playground_state,
 
 		if (entity->current_action == IDLE_ACTION) {
 			entity->jump_count = 0;
-			
+
 			if (event == EVENT_RIGHT_KEY || event == EVENT_LEFT_KEY) {
 				entity->current_action = RUN_ACTION;
 			}
@@ -858,7 +909,7 @@ internal AnimationGroup* EntityStateControl(PlaygroundState* playground_state,
 		}
 		else if (entity->current_action == RUN_ACTION) {
 			entity->jump_count = 0;
-			
+
 			if (event == EVENT_RIGHT_KEY || event == EVENT_LEFT_KEY) {
 				entity->current_action = RUN_ACTION;
 			}
@@ -898,10 +949,91 @@ internal AnimationGroup* EntityStateControl(PlaygroundState* playground_state,
 		}
 		else if (entity->current_action == ATTACK_1_ACTION) {
 			if (entity->state_time == 0.0f) {
-				entity->current_action = IDLE_ACTION;
+				if (event == EVENT_ATTACK_1) {
+					entity->current_action = ATTACK_2_ACTION;
+				}
+				else {
+					entity->current_action = IDLE_ACTION;
+				}
 			}
 			else {
 				entity->velocity *= 0.5f;
+			}
+
+			if (entity->animation_frame_index == 2) {
+				Entity* sword_entity = GetEntity(&playground_state->world, entity->sword_index);
+				sword_entity->collision_volume_group = playground_state->attack_1_collision_volume_group;
+				ASSERT(sword_entity->collision_volume_group);
+				v2 sword_position = v2();
+				b32 left_facing = entity->facing_direction == 1;
+				for (u32 collision_volume_index = 0;
+					 collision_volume_index < sword_entity->collision_volume_group->volume_count;
+					 ++collision_volume_index) {
+					CollisionVolume* collision_volume = sword_entity->collision_volume_group->volumes + collision_volume_index;
+					collision_volume->offset_position.x = left_facing ?
+						-AbsoluteOf(collision_volume->offset_position.x) :
+						AbsoluteOf(collision_volume->offset_position.x);
+				}
+				if (left_facing) {
+					sword_position = entity->position + v2(0.1f, 0.12f);
+				}
+				else {
+					sword_position = entity->position + v2(0.52f, 0.12f);
+				}
+
+				MakeEntitySpatialAndAddToTileMap(playground_state,
+												 &playground_state->world,
+												 sword_entity, entity->sword_index,
+												 v2(0.0f, 0.0f), sword_position, v2());
+			}
+			else if (entity->animation_frame_index == 3) {
+				Entity* sword_entity = GetEntity(&playground_state->world, entity->sword_index);
+				MakeEntityNonspatialAndDeleteFromTileMap(playground_state, &playground_state->world,
+														 sword_entity, entity->sword_index);
+				ClearCollisionPairs(&playground_state->world, entity->sword_index);
+			}
+		}
+
+		else if (entity->current_action == ATTACK_2_ACTION) {
+			if (entity->state_time == 0.0f) {
+				entity->current_action = IDLE_ACTION;
+			}
+			else {
+				entity->velocity.x *= 0.5f;
+			}
+
+			if (entity->animation_frame_index == 3) {
+				Entity* sword_entity = GetEntity(&playground_state->world, entity->sword_index);
+				sword_entity->collision_volume_group = playground_state->attack_2_collision_volume_group;
+				ASSERT(sword_entity->collision_volume_group);
+				v2 sword_position = v2();
+				b32 left_facing = entity->facing_direction == 1;
+				for (u32 collision_volume_index = 0;
+					 collision_volume_index < sword_entity->collision_volume_group->volume_count;
+					 ++collision_volume_index) {
+					CollisionVolume* collision_volume = sword_entity->collision_volume_group->volumes + collision_volume_index;
+					collision_volume->offset_position.x = left_facing ?
+						-AbsoluteOf(collision_volume->offset_position.x) :
+						AbsoluteOf(collision_volume->offset_position.x);
+				}
+				if (left_facing) {
+					sword_position = entity->position + v2(0.1f, 0.0f);
+				}
+				else {
+					sword_position = entity->position + v2(0.5f, 0.0f);
+				}
+
+				MakeEntitySpatialAndAddToTileMap(playground_state,
+												 &playground_state->world,
+												 sword_entity, entity->sword_index,
+												 v2(0.0f, 0.0f), sword_position, v2());
+			}
+
+			else if (entity->animation_frame_index == 4) {
+				Entity* sword_entity = GetEntity(&playground_state->world, entity->sword_index);
+				MakeEntityNonspatialAndDeleteFromTileMap(playground_state, &playground_state->world,
+														 sword_entity, entity->sword_index);
+				ClearCollisionPairs(&playground_state->world, entity->sword_index);
 			}
 		}
 
@@ -910,7 +1042,6 @@ internal AnimationGroup* EntityStateControl(PlaygroundState* playground_state,
 			entity->state_time = 0.0f;
 		}
 
-		
 		switch (entity->current_action) {
 			case IDLE_ACTION: {
 				animation_group_index = AnimationType::IDLE_ANIMATION_TYPE;
@@ -950,6 +1081,10 @@ internal AnimationGroup* EntityStateControl(PlaygroundState* playground_state,
 
 			case ATTACK_1_ACTION: {
 				animation_group_index = AnimationType::ATTACK_1_ANIMATION_TYPE;
+			} break;
+
+			case ATTACK_2_ACTION: {
+				animation_group_index = AnimationType::ATTACK_2_ANIMATION_TYPE;
 			} break;
 		}
 

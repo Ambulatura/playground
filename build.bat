@@ -10,7 +10,7 @@ del *.pdb > NUL 2> NUL
 
 echo Waiting to load code > lock.tmp
 
-cl /Oi /MTd /Zi /FC /nologo /W4 /WX /wd4100 /wd4505 /wd4189 /wd4201 ..\source\playground.cpp /LD /link /incremental:no /PDB:playground_%random%.pdb /EXPORT:PlaygroundUpdateAndRender
+cl /Od /Oi /MTd /Zi /FC /nologo /W4 /WX /wd4100 /wd4505 /wd4189 /wd4201 ..\source\playground.cpp /LD /link /incremental:no /PDB:playground_%random%.pdb /EXPORT:PlaygroundUpdateAndRender
 
 del lock.tmp
 
