@@ -297,58 +297,155 @@ inline b32 TestWall(f32 wall_x,
 	return hit;
 }
 
+// internal void AddCollisionPair(PlaygroundMemoryArena* arena, World* world,
+// 							   u32 first_entity_index, u32 second_entity_index,
+// 							   b32 can_collide)
+// {
+// 	if (first_entity_index != second_entity_index) {
+// 		if (first_entity_index > second_entity_index) {
+// 			SWAP(first_entity_index, second_entity_index, u32);
+// 		}
+
+// 		u32 hash_index = first_entity_index & (ARRAY_COUNT(world->collision_pair_hash) - 1);
+// 		CollisionPair* found = 0;
+// 		for (CollisionPair* collision_pair = world->collision_pair_hash[hash_index];
+// 			 collision_pair;
+// 			 collision_pair = collision_pair->next_collision_pair) {
+// 			if (collision_pair->first_entity_index == first_entity_index &&
+// 				collision_pair->second_entity_index == second_entity_index) {
+// 				found = collision_pair;
+// 				break;
+// 			}
+// 		}
+
+// 		if (!found) {
+// 			found = world->first_free_collision_pair;
+// 			if (!found) {
+// 				found = PushStruct(arena, CollisionPair);
+// 			}
+// 			else {
+// 				world->first_free_collision_pair = found->next_collision_pair;
+// 				found->next_collision_pair = 0;
+// 			}
+
+// 			found->next_collision_pair = world->collision_pair_hash[hash_index];
+// 			world->collision_pair_hash[hash_index] = found;
+// 		}
+
+// 		if (found) {
+// 			found->first_entity_index = first_entity_index;
+// 			found->second_entity_index = second_entity_index;
+// 			found->can_collide = can_collide;
+// 		}
+// 	}
+// }
+
 internal void AddCollisionPair(PlaygroundMemoryArena* arena, World* world,
-							   u32 first_entity_index, u32 second_entity_index,
-							   b32 can_collide)
+								u32 first_entity_index, u32 second_entity_index,
+								b32 can_collide)
 {
 	if (first_entity_index != second_entity_index) {
-		if (first_entity_index > second_entity_index) {
-			SWAP(first_entity_index, second_entity_index, u32);
-		}
+		// if (first_entity_index > second_entity_index) {
+		// 	SWAP(first_entity_index, second_entity_index, u32);
+		// }
 
-		u32 hash_index = first_entity_index & (ARRAY_COUNT(world->collision_pair_hash) - 1);
-		CollisionPair* found = 0;
-		for (CollisionPair* collision_pair = world->collision_pair_hash[hash_index];
-			 collision_pair;
-			 collision_pair = collision_pair->next_collision_pair) {
-			if (collision_pair->first_entity_index == first_entity_index &&
-				collision_pair->second_entity_index == second_entity_index) {
-				found = collision_pair;
-				break;
+		u32 hash_indices[2] = {
+			first_entity_index & (ARRAY_COUNT(world->collision_pair_hash) - 1),
+			second_entity_index & (ARRAY_COUNT(world->collision_pair_hash) - 1)
+		};
+		CollisionPair* pairs[2] = {};
+		for (u32 pair_index = 0; pair_index < 2; ++pair_index) {
+			u32 hash_index = hash_indices[pair_index];
+			for (CollisionPair* collision_pair = world->collision_pair_hash[hash_index];
+				 collision_pair;
+				 collision_pair = collision_pair->next_collision_pair) {
+				if (collision_pair->first_entity_index == first_entity_index &&
+					collision_pair->second_entity_index == second_entity_index) {
+					pairs[pair_index] = collision_pair;
+					break;
+				}
+				else if (collision_pair->first_entity_index == second_entity_index &&
+						 collision_pair->second_entity_index == first_entity_index) {
+					pairs[pair_index] = collision_pair;
+					break;
+				}
 			}
 		}
 
-		if (!found) {
-			found = world->first_free_collision_pair;
-			if (!found) {
-				found = PushStruct(arena, CollisionPair);
-			}
-			else {
-				world->first_free_collision_pair = found->next_collision_pair;
-				found->next_collision_pair = 0;
-			}
+		if (!pairs[0] && !pairs[1]) {
+			ASSERT(!pairs[0] && !pairs[1]);
+			for (u32 pair_index = 0; pair_index < 2; ++pair_index) {
+				u32 hash_index = hash_indices[pair_index];
+				
+				pairs[pair_index] = world->first_free_collision_pair;
+				if (!pairs[pair_index]) {
+					pairs[pair_index] = PushStruct(arena, CollisionPair);
+				}
+				else {
+					world->first_free_collision_pair = pairs[pair_index]->next_collision_pair;
+				}
 
-			found->next_collision_pair = world->collision_pair_hash[hash_index];
-			world->collision_pair_hash[hash_index] = found;
+				pairs[pair_index]->next_collision_pair = world->collision_pair_hash[hash_index];
+				world->collision_pair_hash[hash_index] = pairs[pair_index];
+
+				ASSERT(pairs[pair_index]);
+				if (pair_index == 0) {
+					pairs[pair_index]->first_entity_index = first_entity_index;
+					pairs[pair_index]->second_entity_index = second_entity_index;
+				}
+				else if (pair_index == 1) {
+					pairs[pair_index]->first_entity_index = second_entity_index;
+					pairs[pair_index]->second_entity_index = first_entity_index;
+				}
+				
+				pairs[pair_index]->can_collide = can_collide;
+			}
 		}
 
-		if (found) {
-			found->first_entity_index = first_entity_index;
-			found->second_entity_index = second_entity_index;
-			found->can_collide = can_collide;
+		ASSERT(pairs[0] && pairs[1]);
+		if (pairs[0] && pairs[1]) {
+			pairs[0]->first_entity_index = first_entity_index;
+			pairs[0]->second_entity_index = second_entity_index;
+			pairs[0]->can_collide = can_collide;
+
+			pairs[1]->first_entity_index = second_entity_index;
+			pairs[1]->second_entity_index = first_entity_index;
+			pairs[1]->can_collide = can_collide;
 		}
 	}
 }
+
+// internal void ClearCollisionPairs(World* world,
+// 								  u32 entity_index)
+// {
+// 	u32 hash_index = entity_index & (ARRAY_COUNT(world->collision_pair_hash) - 1);
+// 	for (CollisionPair** collision_pair = world->collision_pair_hash + hash_index;
+// 		 *collision_pair;
+// 		 ) {
+// 		if ((*collision_pair)->first_entity_index == entity_index ||
+// 			(*collision_pair)->second_entity_index == entity_index) {
+
+// 			CollisionPair* deleted_collision_pair = *collision_pair;
+// 			*collision_pair = (*collision_pair)->next_collision_pair;
+
+// 			deleted_collision_pair->next_collision_pair = world->first_free_collision_pair;
+// 			world->first_free_collision_pair = deleted_collision_pair;
+// 		}
+// 		else {
+// 			collision_pair = &(*collision_pair)->next_collision_pair;
+// 		}
+// 	}
+// }
 
 internal void ClearCollisionPairs(World* world,
 								  u32 entity_index)
 {
 	u32 hash_index = entity_index & (ARRAY_COUNT(world->collision_pair_hash) - 1);
+	CollisionPair* saved_first_free_collision_pair = world->first_free_collision_pair;
 	for (CollisionPair** collision_pair = world->collision_pair_hash + hash_index;
 		 *collision_pair;
 		 ) {
-		if ((*collision_pair)->first_entity_index == entity_index ||
-			(*collision_pair)->second_entity_index == entity_index) {
+		if ((*collision_pair)->first_entity_index == entity_index) {
 
 			CollisionPair* deleted_collision_pair = *collision_pair;
 			*collision_pair = (*collision_pair)->next_collision_pair;
@@ -360,7 +457,30 @@ internal void ClearCollisionPairs(World* world,
 			collision_pair = &(*collision_pair)->next_collision_pair;
 		}
 	}
+
+	for (CollisionPair* freed_collision_pair = world->first_free_collision_pair;
+		 freed_collision_pair != saved_first_free_collision_pair;
+		 freed_collision_pair = freed_collision_pair->next_collision_pair) {
+		
+		hash_index = freed_collision_pair->second_entity_index & (ARRAY_COUNT(world->collision_pair_hash) - 1);
+		for (CollisionPair** collision_pair = world->collision_pair_hash + hash_index;
+			 *collision_pair;
+			 ) {
+			if ((*collision_pair)->second_entity_index == entity_index) {
+
+				CollisionPair* deleted_collision_pair = *collision_pair;
+				*collision_pair = (*collision_pair)->next_collision_pair;
+
+				deleted_collision_pair->next_collision_pair = world->first_free_collision_pair;
+				world->first_free_collision_pair = deleted_collision_pair;
+			}
+			else {
+				collision_pair = &(*collision_pair)->next_collision_pair;
+			}
+		}
+	}
 }
+
 
 internal b32 CanCollide(World* world,
 						Entity* first_entity, u32 first_entity_index,

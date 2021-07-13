@@ -126,7 +126,7 @@ internal void Win32ResizeDisplayBuffer(Win32DisplayBuffer* display_buffer, i32 w
 
 	display_buffer->bitmap_info.bmiHeader.biSize = sizeof(display_buffer->bitmap_info.bmiHeader);
 	display_buffer->bitmap_info.bmiHeader.biWidth = display_buffer->width;
-	display_buffer->bitmap_info.bmiHeader.biHeight = -display_buffer->height;
+	display_buffer->bitmap_info.bmiHeader.biHeight = display_buffer->height;
 	display_buffer->bitmap_info.bmiHeader.biPlanes = 1;
 	display_buffer->bitmap_info.bmiHeader.biBitCount = 32;
 	display_buffer->bitmap_info.bmiHeader.biCompression = BI_RGB;

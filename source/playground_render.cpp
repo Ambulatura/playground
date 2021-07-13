@@ -161,8 +161,12 @@ internal Bitmap LoadBmp(char* file_name, PlaygroundReadFileCallback* PlaygroundR
 		}
 	}
 
-	loaded_bmp.pitch = -loaded_bmp.width * BITMAP_BYTES_PER_PIXEL;
-	loaded_bmp.memory = (u8*)loaded_bmp.memory - loaded_bmp.pitch * (loaded_bmp.height - 1);
+	loaded_bmp.pitch = loaded_bmp.width * BITMAP_BYTES_PER_PIXEL;
+	
+#if 0 
+	loaded_bmp.pitch = -loaded_bmp.pitch;
+	loaded_bmp.memory = (u8*)loaded_bmp.memory + loaded_bmp.pitch * (loaded_bmp.height - 1);
+#endif
 	
 	return loaded_bmp;
 }
@@ -337,9 +341,11 @@ internal void BitmapCall(RenderGroup* render_group, Bitmap* bitmap, v2 offset, v
 		render_group_element->bitmap = bitmap;
 		render_group_element->flip_horizontally = flip_horizontally;
 		render_group_element->spec.position = render_group->position;
+		// TODO(SSJSR): Maybe we should correct the alignment on different place?
+		// For examlple after we load the bitmap.
 		align = v2(flip_horizontally ? bitmap->width - align.x : align.x,
-				   align.y);
-		render_group_element->spec.offset = render_group->meters_to_pixels * v2(offset.x, -offset.y) - align;
+				   (f32)(bitmap->height) - align.y);
+		render_group_element->spec.offset = render_group->meters_to_pixels * offset - align;
 		render_group_element->color = color;
 	}
 }
@@ -351,7 +357,7 @@ internal void RectangleCall(RenderGroup* render_group, v2 offset, v2 dimension, 
 	if (render_group_element) {
 		render_group_element->dimension = render_group->meters_to_pixels * dimension;
 		render_group_element->spec.position = render_group->position;
-		render_group_element->spec.offset = render_group->meters_to_pixels * v2(offset.x, -offset.y);
+		render_group_element->spec.offset = render_group->meters_to_pixels * offset;
 		render_group_element->color = color;
 	}
 }
@@ -389,9 +395,10 @@ internal v2 GetScreenPosition(RenderGroup* render_group, RenderElementSpec* spec
 {
 	v2 position = *(spec->position);
 			
-	v2 center_position = v2(screen_center.x + spec->offset.x + render_group->meters_to_pixels * position.x,
-							screen_center.y + spec->offset.y - render_group->meters_to_pixels * position.y);
+	// v2 center_position = v2(screen_center.x + spec->offset.x + render_group->meters_to_pixels * position.x,
+	// 						screen_center.y + spec->offset.y + render_group->meters_to_pixels * position.y);
 
+	v2 center_position = v2(screen_center + spec->offset + render_group->meters_to_pixels * position);
 	return center_position;
 }
 
